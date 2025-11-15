@@ -36,6 +36,14 @@ export default function ClientDashboard({ auth }) {
                                     → Tagihan & Pembayaran
                                 </Link>
                             </div>
+                            <div>
+                                <Link
+                                    href={route('client.complaints.index')}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                    → Aduan & Kendala
+                                </Link>
+                            </div>
                          </div>
                     </div>
                 </div>

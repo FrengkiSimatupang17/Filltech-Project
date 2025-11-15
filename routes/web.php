@@ -11,9 +11,10 @@ use App\Http\Controllers\Admin\EquipmentController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\PaymentController;
+use App\Http\Controllers\Client\ComplaintController; // <-- Tambahkan ini
 use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController;
 use App\Http\Controllers\Teknisi\AttendanceController;
-use App\Http\Controllers\Teknisi\EquipmentLogController; // <-- Tambahkan ini
+use App\Http\Controllers\Teknisi\EquipmentLogController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -67,6 +68,9 @@ Route::middleware(['auth', 'can:is-client'])->prefix('client')->name('client.')-
     
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
+
+    Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index'); // <-- Tambahkan ini
+    Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store'); // <-- Tambahkan ini
     
 });
 
@@ -78,9 +82,9 @@ Route::middleware(['auth', 'can:is-teknisi'])->prefix('teknisi')->name('teknisi.
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
 
-    Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index'); // <-- Tambahkan ini
-    Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store'); // <-- Tambah/Pinjam
-    Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update'); // <-- Update/Kembalikan
+    Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
+    Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
+    Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
 
 });
 
