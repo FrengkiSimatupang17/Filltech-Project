@@ -46,6 +46,14 @@ export default function AdminDashboard({ auth }) {
                             </div>
                             <div>
                                 <Link
+                                    href={route('admin.equipment.index')}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                    → Manajemen Alat Kantor
+                                </Link>
+                            </div>
+                            <div>
+                                <Link
                                     href={route('admin.packages.index')}
                                     className="text-blue-600 hover:text-blue-800 font-medium"
                                 >
