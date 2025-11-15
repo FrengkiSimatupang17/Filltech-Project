@@ -10,7 +10,7 @@ import SelectInput from '@/Components/SelectInput';
 
 export default function Index({ auth, tasks, teknisi }) {
     const [showAssignModal, setShowAssignModal] = useState(null);
-    const { data, setData, patch, processing, errors, reset }_ = useForm({
+    const { data, setData, patch, processing, errors, reset } = useForm({
         task_id: '',
         title: '',
         technician_user_id: '',

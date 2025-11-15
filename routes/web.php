@@ -6,10 +6,12 @@ use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\ClientManagementController;
 use App\Http\Controllers\Admin\SubscriptionManagementController;
 use App\Http\Controllers\Admin\PaymentVerificationController;
-use App\Http\Controllers\Admin\TaskManagementController; // <-- Tambahkan ini
+use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\PaymentController;
+use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController;
+use App\Http\Controllers\Teknisi\AttendanceController; // <-- Tambahkan ini
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -49,8 +51,8 @@ Route::middleware(['auth', 'can:is-admin'])->prefix('admin')->name('admin.')->gr
     Route::get('payments', [PaymentVerificationController::class, 'index'])->name('payments.index');
     Route::patch('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
 
-    Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index'); // <-- Tambahkan ini
-    Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update'); // <-- Tambahkan ini
+    Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index');
+    Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update');
 
 });
 
@@ -62,6 +64,16 @@ Route::middleware(['auth', 'can:is-client'])->prefix('client')->name('client.')-
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
     
+});
+
+Route::middleware(['auth', 'can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
+    
+    Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
+    Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+
+    Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index'); // <-- Tambahkan ini
+    Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store'); // <-- Tambahkan ini
+
 });
 
 require __DIR__.'/auth.php';
