@@ -36,6 +36,14 @@ export default function TeknisiDashboard({ auth }) {
                                     → Absensi Harian
                                 </Link>
                             </div>
+                            <div>
+                                <Link
+                                    href={route('teknisi.equipment.index')}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                    → Manajemen Alat Kantor
+                                </Link>
+                            </div>
                          </div>
                     </div>
                 </div>
