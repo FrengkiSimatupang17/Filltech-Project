@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -8,17 +8,19 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import DangerButton from '@/Components/DangerButton';
+import TextArea from '@/Components/TextArea';
 
 export default function Index({ auth, packages }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(null); // Will hold the package id
-    const [showDeleteModal, setShowDeleteModal] = useState(null); // Will hold the package id
+    const [showEditModal, setShowEditModal] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(null);
 
     const { data, setData, post, patch, delete: destroy, processing, errors, reset } = useForm({
         id: '',
         name: '',
         price: '',
-        description: '',
+        speed: '',
+        description: '', // <-- Tambahkan ini
     });
 
     const openCreateModal = () => {
@@ -31,7 +33,8 @@ export default function Index({ auth, packages }) {
             id: pkg.id,
             name: pkg.name,
             price: pkg.price,
-            description: pkg.description || '',
+            speed: pkg.speed || '',
+            description: pkg.description || '', // <-- Tambahkan ini
         });
         setShowEditModal(pkg.id);
     };
@@ -89,7 +92,8 @@ export default function Index({ auth, packages }) {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Paket</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga (Rp)</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kecepatan</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th> {/* <-- Tambahkan ini */}
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
@@ -98,7 +102,8 @@ export default function Index({ auth, packages }) {
                                     <tr key={pkg.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">{pkg.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{parseFloat(pkg.price).toLocaleString('id-ID')}</td>
-                                        <td className="px-6 py-4">{pkg.description}</td>
+                                        <td className="px-6 py-4">{pkg.speed}</td>
+                                        <td className="px-6 py-4 max-w-xs truncate">{pkg.description}</td> {/* <-- Tambahkan ini */}
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button onClick={() => openEditModal(pkg)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
                                             <button onClick={() => openDeleteModal(pkg)} className="text-red-600 hover:text-red-900">Delete</button>
@@ -107,7 +112,7 @@ export default function Index({ auth, packages }) {
                                 ))}
                                 {packages.length === 0 && (
                                     <tr>
-                                        <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
+                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500"> {/* <-- Ubah colSpan jadi 5 */}
                                             Belum ada paket yang dibuat.
                                         </td>
                                     </tr>
@@ -118,7 +123,6 @@ export default function Index({ auth, packages }) {
                 </div>
             </div>
 
-            {/* Modal untuk Create / Edit */}
             <Modal show={showCreateModal || !!showEditModal} onClose={closeModal}>
                 <form onSubmit={showCreateModal ? submitCreate : submitEdit} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
@@ -135,8 +139,13 @@ export default function Index({ auth, packages }) {
                         <InputError message={errors.price} className="mt-2" />
                     </div>
                     <div className="mt-4">
+                        <InputLabel htmlFor="speed" value="Kecepatan (Cth: 50 Mbps)" />
+                        <TextInput id="speed" value={data.speed} onChange={(e) => setData('speed', e.target.value)} className="mt-1 block w-full" />
+                        <InputError message={errors.speed} className="mt-2" />
+                    </div>
+                    <div className="mt-4"> {/* <-- Blok ini ditambahkan */}
                         <InputLabel htmlFor="description" value="Deskripsi (Opsional)" />
-                        <TextInput id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full" />
+                        <TextArea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full" />
                         <InputError message={errors.description} className="mt-2" />
                     </div>
                     <div className="mt-6 flex justify-end">
@@ -148,7 +157,6 @@ export default function Index({ auth, packages }) {
                 </form>
             </Modal>
 
-            {/* Modal untuk Delete */}
             <Modal show={!!showDeleteModal} onClose={closeModal}>
                 <form onSubmit={submitDelete} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">

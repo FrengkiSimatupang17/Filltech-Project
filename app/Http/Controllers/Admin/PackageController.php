@@ -7,6 +7,7 @@ use App\Models\Package;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
 
 class PackageController extends Controller
 {
@@ -22,7 +23,8 @@ class PackageController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
+            'speed' => 'nullable|string|max:255',
+            'description' => 'nullable|string', // <-- Tambahkan ini
         ]);
 
         Package::create($request->all());
@@ -35,7 +37,8 @@ class PackageController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
+            'speed' => 'nullable|string|max:255',
+            'description' => 'nullable|string', // <-- Tambahkan ini
         ]);
 
         $package->update($request->all());

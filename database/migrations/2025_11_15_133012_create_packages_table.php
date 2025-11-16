@@ -11,8 +11,9 @@ return new class extends Migration
         Schema::create('packages', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('speed')->nullable();
             $table->decimal('price', 10, 2)->default(0);
-            $table->text('description')->nullable();
+            $table->text('description')->nullable(); // <-- Tambahkan ini
             $table->timestamps();
         });
     }

@@ -43,7 +43,8 @@ export default function Subscribe({ auth, packages, hasSubscription, subscriptio
                                 Rp {parseFloat(pkg.price).toLocaleString('id-ID')}
                                 <span className="text-sm font-normal text-gray-500"> /bulan</span>
                             </p>
-                            <p className="text-gray-600 mt-4">{pkg.description || 'Deskripsi paket tidak tersedia.'}</p>
+                            <p className="text-gray-900 mt-4 font-medium">{pkg.speed || 'Kecepatan tidak ditentukan.'}</p>
+                            <p className="text-gray-600 mt-2 text-sm">{pkg.description || 'Deskripsi paket tidak tersedia.'}</p> {/* <-- Tambahkan ini */}
                         </div>
                         <PrimaryButton 
                             className="mt-6 w-full justify-center" 

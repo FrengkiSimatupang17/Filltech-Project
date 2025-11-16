@@ -13,14 +13,15 @@ class Package extends Model
 
     protected $fillable = [
         'name',
+        'speed',
         'price',
-        'description',
+        'description', // <-- Tambahkan ini
     ];
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'price'])
+            ->logOnly(['name', 'price', 'speed', 'description']) // <-- Tambahkan ini
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn(string $eventName) => "Paket {$this->name} telah {$eventName}");
     }
