@@ -23,15 +23,31 @@ class ProfileController extends Controller
 
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        if (!$user->id_unik && $request->filled('rt') && $request->filled('rw') && $request->filled('blok') && $request->filled('nomor_rumah')) {
+            $user->id_unik = $this->generateUniqueId($request);
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    private function generateUniqueId(ProfileUpdateRequest $request): string
+    {
+        $date = now()->format('Ymd');
+        $rt = str_pad($request->rt, 3, '0', STR_PAD_LEFT);
+        $rw = str_pad($request->rw, 3, '0', STR_PAD_LEFT);
+        $blok = $request->blok;
+        $nomor = $request->nomor_rumah;
+
+        return "{$date}_{$rt}_{$rw}_{$blok}{$nomor}";
     }
 
     public function destroy(Request $request): RedirectResponse

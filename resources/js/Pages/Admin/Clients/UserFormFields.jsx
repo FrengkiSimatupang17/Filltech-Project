@@ -54,10 +54,50 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                 <InputError message={errors.phone_number} className="mt-2" />
             </div>
 
-            <div className="mt-4">
-                <InputLabel htmlFor="address_detail" value="Detail Alamat" />
-                <TextInput id="address_detail" value={data.address_detail} onChange={(e) => setData('address_detail', e.target.value)} className="mt-1 block w-full" />
-                <InputError message={errors.address_detail} className="mt-2" />
+            <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <InputLabel htmlFor="rt" value="RT" />
+                    <TextInput
+                        id="rt"
+                        className="mt-1 block w-full"
+                        value={data.rt}
+                        onChange={(e) => setData('rt', e.target.value)}
+                    />
+                    <InputError className="mt-2" message={errors.rt} />
+                </div>
+                <div>
+                    <InputLabel htmlFor="rw" value="RW" />
+                    <TextInput
+                        id="rw"
+                        className="mt-1 block w-full"
+                        value={data.rw}
+                        onChange={(e) => setData('rw', e.target.value)}
+                    />
+                    <InputError className="mt-2" message={errors.rw} />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <InputLabel htmlFor="blok" value="Blok" />
+                    <TextInput
+                        id="blok"
+                        className="mt-1 block w-full"
+                        value={data.blok}
+                        onChange={(e) => setData('blok', e.target.value)}
+                    />
+                    <InputError className="mt-2" message={errors.blok} />
+                </div>
+                <div>
+                    <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
+                    <TextInput
+                        id="nomor_rumah"
+                        className="mt-1 block w-full"
+                        value={data.nomor_rumah}
+                        onChange={(e) => setData('nomor_rumah', e.target.value)}
+                    />
+                    <InputError className="mt-2" message={errors.nomor_rumah} />
+                </div>
             </div>
         </>
     );

@@ -22,8 +22,11 @@ class ClientManagementController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'id_unik' => $user->id_unik,
-                'address_detail' => $user->address_detail,
                 'phone_number' => $user->phone_number,
+                'rt' => $user->rt,
+                'rw' => $user->rw,
+                'blok' => $user->blok,
+                'nomor_rumah' => $user->nomor_rumah,
             ]),
         ]);
     }
@@ -36,8 +39,11 @@ class ClientManagementController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)],
             'role' => ['required', Rule::in(['client', 'administrator', 'teknisi'])],
             'id_unik' => 'nullable|string|max:100|unique:users',
-            'address_detail' => 'nullable|string',
             'phone_number' => 'nullable|string|max:20',
+            'rt' => ['nullable', 'string', 'max:3'],
+            'rw' => ['nullable', 'string', 'max:3'],
+            'blok' => ['nullable', 'string', 'max:10'],
+            'nomor_rumah' => ['nullable', 'string', 'max:10'],
         ]);
 
         User::create([
@@ -46,8 +52,11 @@ class ClientManagementController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'id_unik' => $request->id_unik,
-            'address_detail' => $request->address_detail,
             'phone_number' => $request->phone_number,
+            'rt' => $request->rt,
+            'rw' => $request->rw,
+            'blok' => $request->blok,
+            'nomor_rumah' => $request->nomor_rumah,
         ]);
 
         return Redirect::route('admin.clients.index');
@@ -61,8 +70,11 @@ class ClientManagementController extends Controller
             'password' => ['nullable', 'confirmed', Password::min(8)],
             'role' => ['required', Rule::in(['client', 'administrator', 'teknisi'])],
             'id_unik' => ['nullable', 'string', 'max:100', Rule::unique('users')->ignore($client->id)],
-            'address_detail' => 'nullable|string',
             'phone_number' => 'nullable|string|max:20',
+            'rt' => ['nullable', 'string', 'max:3'],
+            'rw' => ['nullable', 'string', 'max:3'],
+            'blok' => ['nullable', 'string', 'max:10'],
+            'nomor_rumah' => ['nullable', 'string', 'max:10'],
         ]);
 
         $client->fill($request->except('password'));

@@ -2,7 +2,6 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import TextArea from '@/Components/TextArea';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
@@ -12,8 +11,11 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
         name: user.name,
         email: user.email,
-        address_detail: user.address_detail || '',
         phone_number: user.phone_number || '',
+        rt: user.rt || '',
+        rw: user.rw || '',
+        blok: user.blok || '',
+        nomor_rumah: user.nomor_rumah || '',
     });
 
     const submit = (e) => {
@@ -28,6 +30,11 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                 <p className="mt-1 text-sm text-gray-600">
                     Perbarui informasi profil dan alamat email akun Anda.
                 </p>
+                {user.id_unik && (
+                    <div className="mt-2 p-3 bg-indigo-100 border border-indigo-200 rounded-md">
+                        <span className="text-sm font-medium text-indigo-700">ID Unik Anda: {user.id_unik}</span>
+                    </div>
+                )}
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
@@ -92,15 +99,50 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     <InputError className="mt-2" message={errors.phone_number} />
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="address_detail" value="Alamat Lengkap (RT, RW, Blok, No. Rumah)" />
-                    <TextArea
-                        id="address_detail"
-                        className="mt-1 block w-full"
-                        value={data.address_detail}
-                        onChange={(e) => setData('address_detail', e.target.value)}
-                    />
-                    <InputError className="mt-2" message={errors.address_detail} />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="rt" value="RT" />
+                        <TextInput
+                            id="rt"
+                            className="mt-1 block w-full"
+                            value={data.rt}
+                            onChange={(e) => setData('rt', e.target.value)}
+                        />
+                        <InputError className="mt-2" message={errors.rt} />
+                    </div>
+                     <div>
+                        <InputLabel htmlFor="rw" value="RW" />
+                        <TextInput
+                            id="rw"
+                            className="mt-1 block w-full"
+                            value={data.rw}
+                            onChange={(e) => setData('rw', e.target.value)}
+                        />
+                        <InputError className="mt-2" message={errors.rw} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <InputLabel htmlFor="blok" value="Blok" />
+                        <TextInput
+                            id="blok"
+                            className="mt-1 block w-full"
+                            value={data.blok}
+                            onChange={(e) => setData('blok', e.target.value)}
+                        />
+                        <InputError className="mt-2" message={errors.blok} />
+                    </div>
+                     <div>
+                        <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
+                        <TextInput
+                            id="nomor_rumah"
+                            className="mt-1 block w-full"
+                            value={data.nomor_rumah}
+                            onChange={(e) => setData('nomor_rumah', e.target.value)}
+                        />
+                        <InputError className="mt-2" message={errors.nomor_rumah} />
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">

@@ -4,11 +4,7 @@ import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
-import InputLabel from '@/Components/InputLabel';
-import InputError from '@/Components/InputError';
 import DangerButton from '@/Components/DangerButton';
-import SelectInput from '@/Components/SelectInput';
 import UserFormFields from './UserFormFields';
 
 export default function Index({ auth, users }) {
@@ -22,14 +18,18 @@ export default function Index({ auth, users }) {
         email: '',
         role: 'client',
         id_unik: '',
-        address_detail: '',
         phone_number: '',
+        rt: '',
+        rw: '',
+        blok: '',
+        nomor_rumah: '',
         password: '',
         password_confirmation: '',
     });
 
     const openCreateModal = () => {
         reset();
+        setData('role', 'client');
         setShowCreateModal(true);
     };
 
@@ -40,8 +40,11 @@ export default function Index({ auth, users }) {
             email: user.email,
             role: user.role,
             id_unik: user.id_unik || '',
-            address_detail: user.address_detail || '',
             phone_number: user.phone_number || '',
+            rt: user.rt || '',
+            rw: user.rw || '',
+            blok: user.blok || '',
+            nomor_rumah: user.nomor_rumah || '',
             password: '',
             password_confirmation: '',
         });
