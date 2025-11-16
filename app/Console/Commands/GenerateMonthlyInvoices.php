@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Invoice;
+use App\Models\Subscription;
+use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+
+class GenerateMonthlyInvoices extends Command
+{
+    protected $signature = 'app:generate-monthly-invoices';
+
+    protected $description = 'Generate monthly invoices for all active subscriptions';
+
+    public function handle()
+    {
+        $this->info('Starting to generate monthly invoices...');
+
+        $activeSubscriptions = Subscription::with(['user', 'package'])
+            ->where('status', 'active')
+            ->get();
+
+        $count = 0;
+        $now = Carbon::now();
+
+        foreach ($activeSubscriptions as $subscription) {
+            $user = $subscription->user;
+            $package = $subscription->package;
+
+            $invoiceExists = Invoice::where('subscription_id', $subscription->id)
+                ->where('type', 'monthly')
+                ->whereYear('created_at', $now->year)
+                ->whereMonth('created_at', $now->month)
+                ->exists();
+
+            if (!$invoiceExists) {
+                Invoice::create([
+                    'user_id' => $user->id,
+                    'subscription_id' => $subscription->id,
+                    'invoice_number' => 'INV-MTH-' . $now->format('Ym') . '-' . $user->id,
+                    'amount' => $package->price,
+                    'status' => 'pending',
+                    'type' => 'monthly',
+                    'due_date' => $now->addDays(7),
+                ]);
+
+                $count++;
+            }
+        }
+
+        $this->info("Successfully generated $count new monthly invoices.");
+        return 0;
+    }
+}
