@@ -20,7 +20,7 @@ export default function Index({ auth, packages }) {
         name: '',
         price: '',
         speed: '',
-        description: '', // <-- Tambahkan ini
+        description: '',
     });
 
     const openCreateModal = () => {
@@ -34,7 +34,7 @@ export default function Index({ auth, packages }) {
             name: pkg.name,
             price: pkg.price,
             speed: pkg.speed || '',
-            description: pkg.description || '', // <-- Tambahkan ini
+            description: pkg.description || '',
         });
         setShowEditModal(pkg.id);
     };
@@ -93,7 +93,7 @@ export default function Index({ auth, packages }) {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Paket</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga (Rp)</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kecepatan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th> {/* <-- Tambahkan ini */}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
@@ -103,7 +103,7 @@ export default function Index({ auth, packages }) {
                                         <td className="px-6 py-4 whitespace-nowrap">{pkg.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{parseFloat(pkg.price).toLocaleString('id-ID')}</td>
                                         <td className="px-6 py-4">{pkg.speed}</td>
-                                        <td className="px-6 py-4 max-w-xs truncate">{pkg.description}</td> {/* <-- Tambahkan ini */}
+                                        <td className="px-6 py-4 max-w-xs truncate">{pkg.description}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button onClick={() => openEditModal(pkg)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
                                             <button onClick={() => openDeleteModal(pkg)} className="text-red-600 hover:text-red-900">Delete</button>
@@ -112,7 +112,7 @@ export default function Index({ auth, packages }) {
                                 ))}
                                 {packages.length === 0 && (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500"> {/* <-- Ubah colSpan jadi 5 */}
+                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                                             Belum ada paket yang dibuat.
                                         </td>
                                     </tr>
@@ -143,7 +143,7 @@ export default function Index({ auth, packages }) {
                         <TextInput id="speed" value={data.speed} onChange={(e) => setData('speed', e.target.value)} className="mt-1 block w-full" />
                         <InputError message={errors.speed} className="mt-2" />
                     </div>
-                    <div className="mt-4"> {/* <-- Blok ini ditambahkan */}
+                    <div className="mt-4">
                         <InputLabel htmlFor="description" value="Deskripsi (Opsional)" />
                         <TextArea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full" />
                         <InputError message={errors.description} className="mt-2" />
