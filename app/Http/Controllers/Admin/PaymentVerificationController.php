@@ -71,6 +71,11 @@ class PaymentVerificationController extends Controller
                 'paid_at' => now(),
             ]);
 
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($payment)
+                ->log("Menyetujui pembayaran untuk tagihan {$invoice->invoice_number}");
+
             if ($invoice->type === 'installation' && $invoice->subscription_id) {
                 $subscription = Subscription::find($invoice->subscription_id);
                 if ($subscription && $subscription->status === 'pending') {
@@ -99,5 +104,10 @@ class PaymentVerificationController extends Controller
             'verified_at' => now(),
             'verified_by_admin_id' => Auth::id(),
         ]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($payment)
+            ->log("Menolak pembayaran untuk tagihan {$payment->invoice->invoice_number}");
     }
 }

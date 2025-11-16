@@ -99,6 +99,12 @@ export default function AdminDashboard({ auth, stats }) {
                             >
                                 → Manajemen Klien & User
                             </Link>
+                             <Link
+                                href={route('admin.activity-log.index')}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                                → Log Aktivitas Sistem
+                            </Link>
                          </div>
                     </div>
                 </div>

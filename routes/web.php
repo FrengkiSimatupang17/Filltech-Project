@@ -8,7 +8,9 @@ use App\Http\Controllers\Admin\SubscriptionManagementController;
 use App\Http\Controllers\Admin\PaymentVerificationController;
 use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
-use App\Http\Controllers\Admin\ReportController; // <-- Tambahkan ini
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\PaymentController;
@@ -32,6 +34,9 @@ Route::get('/', function () {
 Route::get('/dashboard', DashboardRedirectController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::get('/auth/google/redirect', [SocialiteController::class, 'redirectToGoogle'])->name('socialite.google.redirect');
+Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCallback'])->name('socialite.google.callback');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -60,7 +65,9 @@ Route::middleware(['auth', 'can:is-admin'])->prefix('admin')->name('admin.')->gr
 
     Route::resource('equipment', EquipmentController::class)->except(['show']);
 
-    Route::get('reports', [ReportController::class, 'index'])->name('reports.index'); // <-- Tambahkan ini
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+
+    Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
 });
 
