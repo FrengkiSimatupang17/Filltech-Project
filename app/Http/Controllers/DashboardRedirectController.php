@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Support\Carbon;
 
 class DashboardRedirectController extends Controller
 {
@@ -13,7 +19,23 @@ class DashboardRedirectController extends Controller
         $user = Auth::user();
 
         if ($user->role === 'administrator') {
-            return Inertia::render('Dashboard/AdminDashboard');
+            
+            $stats = [
+                'pending_payments' => Payment::where('status', 'pending')->count(),
+                'pending_tasks' => Task::where('status', 'pending')->count(),
+                'new_clients_monthly' => User::where('role', 'client')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->whereYear('created_at', Carbon::now()->year)
+                    ->count(),
+                'monthly_revenue' => Invoice::where('status', 'paid')
+                    ->whereMonth('paid_at', Carbon::now()->month)
+                    ->whereYear('paid_at', Carbon::now()->year)
+                    ->sum('amount'),
+            ];
+
+            return Inertia::render('Dashboard/AdminDashboard', [
+                'stats' => $stats
+            ]);
         }
 
         if ($user->role === 'teknisi') {
@@ -24,7 +46,6 @@ class DashboardRedirectController extends Controller
             return Inertia::render('Dashboard/ClientDashboard');
         }
 
-        // Fallback default, meskipun seharusnya tidak terjadi
         return Inertia::render('Dashboard');
     }
 }
