@@ -77,12 +77,11 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 </div> 
                 
                 {/* --- Sidebar --- */}
-                {/* z-40: Menurunkan z-index agar di bawah modal (z-50)
-                */}
+                {/* z-40: Menurunkan z-index agar di bawah modal (z-50) */}
                 <div className="drawer-side z-40">
                     
-                    {/* PERBAIKAN UTAMA DI SINI:
-                      sm:hidden -> Menyembunyikan overlay di layar desktop
+                    {/* PENTING: sm:hidden -> Menyembunyikan overlay di desktop
+                       Inilah yang memperbaiki bug "modal berkedip".
                     */}
                     <label 
                         htmlFor="my-drawer" 
