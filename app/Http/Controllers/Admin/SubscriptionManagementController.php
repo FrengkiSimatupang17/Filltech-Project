@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Subscription;
+use App\Notifications\NewInvoiceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -52,7 +53,7 @@ class SubscriptionManagementController extends Controller
                 ->with('error', 'Klien ini sudah memiliki tagihan instalasi.');
         }
 
-        Invoice::create([
+        $invoice = Invoice::create([
             'user_id' => $user->id,
             'subscription_id' => $subscription->id,
             'invoice_number' => 'INV-' . time() . '-' . $user->id,
@@ -61,6 +62,8 @@ class SubscriptionManagementController extends Controller
             'type' => 'installation',
             'due_date' => now()->addDays(7),
         ]);
+
+        $user->notify(new NewInvoiceNotification($invoice));
 
         return Redirect::route('admin.subscriptions.index');
     }

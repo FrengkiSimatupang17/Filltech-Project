@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\Task;
+use App\Notifications\PaymentVerifiedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,8 @@ class PaymentVerificationController extends Controller
                 ->causedBy(Auth::user())
                 ->performedOn($payment)
                 ->log("Menyetujui pembayaran untuk tagihan {$invoice->invoice_number}");
+
+            $payment->user->notify(new PaymentVerifiedNotification($payment));
 
             if ($invoice->type === 'installation' && $invoice->subscription_id) {
                 $subscription = Subscription::find($invoice->subscription_id);

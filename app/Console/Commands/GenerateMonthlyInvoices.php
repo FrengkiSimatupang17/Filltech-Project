@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Invoice;
 use App\Models\Subscription;
+use App\Notifications\NewInvoiceNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -35,7 +36,7 @@ class GenerateMonthlyInvoices extends Command
                 ->exists();
 
             if (!$invoiceExists) {
-                Invoice::create([
+                $invoice = Invoice::create([
                     'user_id' => $user->id,
                     'subscription_id' => $subscription->id,
                     'invoice_number' => 'INV-MTH-' . $now->format('Ym') . '-' . $user->id,
@@ -45,6 +46,7 @@ class GenerateMonthlyInvoices extends Command
                     'due_date' => $now->addDays(7),
                 ]);
 
+                $user->notify(new NewInvoiceNotification($invoice));
                 $count++;
             }
         }
