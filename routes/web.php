@@ -8,10 +8,11 @@ use App\Http\Controllers\Admin\SubscriptionManagementController;
 use App\Http\Controllers\Admin\PaymentVerificationController;
 use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
+use App\Http\Controllers\Admin\ReportController; // <-- Tambahkan ini
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\PaymentController;
-use App\Http\Controllers\Client\ComplaintController; // <-- Tambahkan ini
+use App\Http\Controllers\Client\ComplaintController;
 use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController;
 use App\Http\Controllers\Teknisi\AttendanceController;
 use App\Http\Controllers\Teknisi\EquipmentLogController;
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'can:is-admin'])->prefix('admin')->name('admin.')->gr
 
     Route::resource('equipment', EquipmentController::class)->except(['show']);
 
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index'); // <-- Tambahkan ini
+
 });
 
 Route::middleware(['auth', 'can:is-client'])->prefix('client')->name('client.')->group(function () {
@@ -69,8 +72,8 @@ Route::middleware(['auth', 'can:is-client'])->prefix('client')->name('client.')-
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
 
-    Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index'); // <-- Tambahkan ini
-    Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store'); // <-- Tambahkan ini
+    Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index');
+    Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
     
 });
 

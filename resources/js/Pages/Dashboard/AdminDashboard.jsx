@@ -48,6 +48,7 @@ export default function AdminDashboard({ auth, stats }) {
                         <StatCard 
                             title="Pendapatan (Bulan Ini)" 
                             value={`Rp ${parseFloat(stats.monthly_revenue).toLocaleString('id-ID')}`} 
+                            link={route('admin.reports.index')}
                         />
                     </div>
 
@@ -56,6 +57,12 @@ export default function AdminDashboard({ auth, stats }) {
                             <h3 className="text-lg font-medium">Navigasi Cepat</h3>
                          </div>
                          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Link
+                                href={route('admin.reports.index')}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                                → Laporan Pendapatan
+                            </Link>
                             <Link
                                 href={route('admin.tasks.index')}
                                 className="text-blue-600 hover:text-blue-800 font-medium"
