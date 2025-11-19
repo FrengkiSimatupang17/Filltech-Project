@@ -23,11 +23,11 @@ export default function Index({ auth, invoices }) {
             amount: invoice.amount,
             payment_proof: null,
         });
-        setShowUploadModal(true);
+        setShowUploadModal(invoice.id);
     };
 
     const closeModal = () => {
-        setShowUploadModal(false);
+        setShowUploadModal(null);
         reset();
     };
 
@@ -123,7 +123,7 @@ export default function Index({ auth, invoices }) {
                 </div>
             </div>
 
-            <Modal show={showUploadModal} onClose={closeModal}>
+            <Modal show={!!showUploadModal} onClose={closeModal}>
                 <form onSubmit={submitPayment} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
                         Konfirmasi Pembayaran

@@ -7,6 +7,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
+import EmptyState from '@/Components/EmptyState';
 
 export default function Index({ auth, subscriptions }) {
     const [showInvoiceModal, setShowInvoiceModal] = useState(null);
@@ -22,11 +23,11 @@ export default function Index({ auth, subscriptions }) {
             user_name: sub.user_name,
             amount: '',
         });
-        setShowInvoiceModal(true);
+        setShowInvoiceModal(sub.id);
     };
 
     const closeModal = () => {
-        setShowInvoiceModal(false);
+        setShowInvoiceModal(null);
         reset();
     };
 
@@ -37,12 +38,12 @@ export default function Index({ auth, subscriptions }) {
         });
     };
 
-    const getStatusClass = (status) => {
+    const getStatusBadge = (status) => {
         switch (status) {
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'active': return 'bg-green-100 text-green-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'pending': return 'badge badge-warning';
+            case 'active': return 'badge badge-success text-white';
+            case 'cancelled': return 'badge badge-error text-white';
+            default: return 'badge badge-ghost';
         }
     };
 
@@ -55,52 +56,61 @@ export default function Index({ auth, subscriptions }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klien</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paket</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Daftar</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {subscriptions.map((sub) => (
-                                        <tr key={sub.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{sub.user_name}</div>
-                                                <div className="text-sm text-gray-500">{sub.user_email}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sub.package_name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(sub.status)}`}>
-                                                    {sub.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.created_at}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                {sub.status === 'pending' && !sub.has_installation_invoice && (
-                                                    <button onClick={() => openInvoiceModal(sub)} className="text-indigo-600 hover:text-indigo-900">
-                                                        Buat Tagihan Instalasi
-                                                    </button>
-                                                )}
-                                                {sub.has_installation_invoice && (
-                                                    <span className="text-sm text-gray-500">Tagihan Dibuat</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="card bg-base-100 shadow-xl">
+                        <div className="card-body">
+                            {subscriptions.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="table table-zebra w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Klien</th>
+                                                <th>Paket</th>
+                                                <th>Status</th>
+                                                <th>Tanggal Daftar</th>
+                                                <th className="text-right">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {subscriptions.map((sub) => (
+                                                <tr key={sub.id}>
+                                                    <td>
+                                                        <div className="font-bold">{sub.user_name}</div>
+                                                        <div className="text-xs opacity-50">{sub.user_email}</div>
+                                                    </td>
+                                                    <td>{sub.package_name}</td>
+                                                    <td>
+                                                        <span className={getStatusBadge(sub.status)}>
+                                                            {sub.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="text-sm">{sub.created_at}</td>
+                                                    <td className="text-right">
+                                                        {sub.status === 'pending' && !sub.has_installation_invoice && (
+                                                            <button onClick={() => openInvoiceModal(sub)} className="btn btn-xs btn-outline btn-primary">
+                                                                Buat Tagihan
+                                                            </button>
+                                                        )}
+                                                        {sub.has_installation_invoice && (
+                                                            <span className="text-xs text-gray-500 italic">Tagihan Terkirim</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    title="Tidak Ada Langganan"
+                                    message="Belum ada klien yang mendaftar paket WiFi."
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <Modal show={showInvoiceModal} onClose={closeModal}>
+            <Modal show={!!showInvoiceModal} onClose={closeModal}>
                 <form onSubmit={submitCreateInvoice} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
                         Buat Tagihan Instalasi untuk {data.user_name}
@@ -123,7 +133,7 @@ export default function Index({ auth, subscriptions }) {
                     <div className="mt-6 flex justify-end">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton className="ml-3" disabled={processing}>
-                            Buat Tagahian
+                            Buat Tagihan
                         </PrimaryButton>
                     </div>
                 </form>

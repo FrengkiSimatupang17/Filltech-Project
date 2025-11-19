@@ -9,6 +9,7 @@ import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import DangerButton from '@/Components/DangerButton';
 import TextArea from '@/Components/TextArea';
+import EmptyState from '@/Components/EmptyState';
 
 export default function Index({ auth, packages }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -86,39 +87,47 @@ export default function Index({ auth, packages }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Paket</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga (Rp)</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kecepatan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {packages.map((pkg) => (
-                                    <tr key={pkg.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">{pkg.name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{parseFloat(pkg.price).toLocaleString('id-ID')}</td>
-                                        <td className="px-6 py-4">{pkg.speed}</td>
-                                        <td className="px-6 py-4 max-w-xs truncate">{pkg.description}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button onClick={() => openEditModal(pkg)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                                            <button onClick={() => openDeleteModal(pkg)} className="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {packages.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                                            Belum ada paket yang dibuat.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                    <div className="card bg-base-100 shadow-xl">
+                        <div className="card-body">
+                            {packages.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="table table-zebra table-sm min-w-full">
+                                        <thead>
+                                            <tr>
+                                                <th className="p-4">Nama Paket</th>
+                                                <th className="p-4">Harga (Rp)</th>
+                                                <th className="p-4">Kecepatan</th>
+                                                <th className="p-4">Deskripsi</th>
+                                                <th className="p-4 text-right">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {packages.map((pkg) => (
+                                                <tr key={pkg.id}>
+                                                    <td className="font-medium">{pkg.name}</td>
+                                                    <td>{parseFloat(pkg.price).toLocaleString('id-ID')}</td>
+                                                    <td>{pkg.speed}</td>
+                                                    <td className="max-w-xs truncate">{pkg.description}</td>
+                                                    <td className="text-right">
+                                                        <button onClick={() => openEditModal(pkg)} className="link link-primary text-sm mr-4">Edit</button>
+                                                        <button onClick={() => openDeleteModal(pkg)} className="link link-error text-sm">Delete</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    title="Belum Ada Paket"
+                                    message="Buat paket WiFi pertama Anda untuk memulai."
+                                >
+                                    <PrimaryButton onClick={openCreateModal}>
+                                        Tambah Paket Baru
+                                    </PrimaryButton>
+                                </EmptyState>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

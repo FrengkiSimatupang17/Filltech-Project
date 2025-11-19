@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\Channels; // <-- Pastikan ini 'App\Channels' BUKAN 'App'
 
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;

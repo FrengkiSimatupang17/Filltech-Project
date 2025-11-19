@@ -48,7 +48,7 @@ class SocialiteController extends Controller
             ]);
 
             Auth::login($newUser);
-            return redirect()->route('dashboard');
+            return redirect()->route('profile.complete');
 
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Login dengan Google gagal.');

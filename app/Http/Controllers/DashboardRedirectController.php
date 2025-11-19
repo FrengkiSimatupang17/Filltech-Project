@@ -18,6 +18,12 @@ class DashboardRedirectController extends Controller
     {
         $user = Auth::user();
 
+        // Enforcement Check
+        if ($user->role === 'client' && !$user->id_unik) {
+            return redirect()->route('profile.complete');
+        }
+
+        // ADMIN Dashboard Logic
         if ($user->role === 'administrator') {
             
             $stats = [
@@ -38,12 +44,40 @@ class DashboardRedirectController extends Controller
             ]);
         }
 
+        // TEKNISI Dashboard Logic
         if ($user->role === 'teknisi') {
             return Inertia::render('Dashboard/TeknisiDashboard');
         }
 
+        // CLIENT Dashboard Logic (Enhanced)
         if ($user->role === 'client') {
-            return Inertia::render('Dashboard/ClientDashboard');
+            $subscription = Subscription::with('package')
+                ->where('user_id', $user->id)
+                ->where('status', '!=', 'inactive')
+                ->first();
+
+            $data = [
+                'hasSubscription' => $subscription !== null,
+                'subscriptionDetails' => null,
+            ];
+
+            if ($subscription) {
+                $nextInvoice = Invoice::where('user_id', $user->id)
+                    ->where('status', '!=', 'paid')
+                    ->orderBy('due_date', 'asc')
+                    ->first();
+
+                $data['subscriptionDetails'] = [
+                    'package_name' => $subscription->package->name,
+                    'package_speed' => $subscription->package->speed,
+                    'status' => $subscription->status,
+                    'monthly_price' => $subscription->package->price,
+                    'next_invoice_due' => $nextInvoice ? $nextInvoice->due_date->format('d M Y') : 'N/A',
+                    'next_invoice_amount' => $nextInvoice ? $nextInvoice->amount : 0,
+                ];
+            }
+
+            return Inertia::render('Dashboard/ClientDashboard', $data);
         }
 
         return Inertia::render('Dashboard');

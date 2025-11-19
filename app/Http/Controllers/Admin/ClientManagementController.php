@@ -16,7 +16,7 @@ class ClientManagementController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Clients/Index', [
-            'users' => User::orderBy('name')->get()->map(fn ($user) => [
+            'users' => User::where('role', 'client')->orderBy('name')->get()->map(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -37,7 +37,6 @@ class ClientManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::min(8)],
-            'role' => ['required', Rule::in(['client', 'administrator', 'teknisi'])],
             'id_unik' => 'nullable|string|max:100|unique:users',
             'phone_number' => 'nullable|string|max:20',
             'rt' => ['nullable', 'string', 'max:3'],
@@ -50,7 +49,7 @@ class ClientManagementController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role' => 'client',
             'id_unik' => $request->id_unik,
             'phone_number' => $request->phone_number,
             'rt' => $request->rt,
@@ -59,16 +58,15 @@ class ClientManagementController extends Controller
             'nomor_rumah' => $request->nomor_rumah,
         ]);
 
-        return Redirect::route('admin.clients.index');
+        return Redirect::route('admin.clients.index')->with('success', 'Klien baru berhasil ditambahkan!');
     }
-
+    
     public function update(Request $request, User $client)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($client->id)],
             'password' => ['nullable', 'confirmed', Password::min(8)],
-            'role' => ['required', Rule::in(['client', 'administrator', 'teknisi'])],
             'id_unik' => ['nullable', 'string', 'max:100', Rule::unique('users')->ignore($client->id)],
             'phone_number' => 'nullable|string|max:20',
             'rt' => ['nullable', 'string', 'max:3'],
@@ -85,13 +83,13 @@ class ClientManagementController extends Controller
 
         $client->save();
 
-        return Redirect::route('admin.clients.index');
+        return Redirect::route('admin.clients.index')->with('success', 'Data klien berhasil diperbarui.');
     }
 
     public function destroy(User $client)
     {
         $client->delete();
 
-        return Redirect::route('admin.clients.index');
+        return Redirect::route('admin.clients.index')->with('success', 'Akun klien berhasil dihapus.');
     }
 }

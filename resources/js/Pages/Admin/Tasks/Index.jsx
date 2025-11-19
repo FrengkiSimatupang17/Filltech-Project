@@ -7,6 +7,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import SelectInput from '@/Components/SelectInput';
+import EmptyState from '@/Components/EmptyState';
 
 export default function Index({ auth, tasks, teknisi }) {
     const [showAssignModal, setShowAssignModal] = useState(null);
@@ -22,11 +23,11 @@ export default function Index({ auth, tasks, teknisi }) {
             title: task.title,
             technician_user_id: teknisi.length > 0 ? teknisi[0].id : '',
         });
-        setShowAssignModal(true);
+        setShowAssignModal(task.id);
     };
 
     const closeModal = () => {
-        setShowAssignModal(false);
+        setShowAssignModal(null);
         reset();
     };
 
@@ -37,14 +38,14 @@ export default function Index({ auth, tasks, teknisi }) {
         });
     };
 
-    const getStatusClass = (status) => {
+    const getStatusBadge = (status) => {
         switch (status) {
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'assigned': return 'bg-blue-100 text-blue-800';
-            case 'in_progress': return 'bg-indigo-100 text-indigo-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'pending': return 'badge badge-warning';
+            case 'assigned': return 'badge badge-info text-white';
+            case 'in_progress': return 'badge badge-primary text-white';
+            case 'completed': return 'badge badge-success text-white';
+            case 'cancelled': return 'badge badge-error text-white';
+            default: return 'badge badge-ghost';
         }
     };
 
@@ -57,55 +58,57 @@ export default function Index({ auth, tasks, teknisi }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Tugas</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klien</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teknisi</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {tasks.map((task) => (
-                                        <tr key={task.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.title}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.client_name || '-'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.technician_name || '-'}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(task.status)}`}>
-                                                    {task.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{task.type}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                {task.status === 'pending' && (
-                                                    <button onClick={() => openAssignModal(task)} className="text-indigo-600 hover:text-indigo-900">
-                                                        Tugaskan
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {tasks.length === 0 && (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                                Tidak ada tugas.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    <div className="card bg-base-100 shadow-xl">
+                        <div className="card-body">
+                            {tasks.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="table table-zebra w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Judul Tugas</th>
+                                                <th>Klien</th>
+                                                <th>Teknisi</th>
+                                                <th>Status</th>
+                                                <th>Jenis</th>
+                                                <th className="text-right">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {tasks.map((task) => (
+                                                <tr key={task.id}>
+                                                    <td className="font-bold">{task.title}</td>
+                                                    <td>{task.client_name || '-'}</td>
+                                                    <td>{task.technician_name || <span className="text-gray-400 italic">Belum ada</span>}</td>
+                                                    <td>
+                                                        <span className={getStatusBadge(task.status)}>
+                                                            {task.status.replace('_', ' ')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="capitalize">{task.type}</td>
+                                                    <td className="text-right">
+                                                        {task.status === 'pending' && (
+                                                            <button onClick={() => openAssignModal(task)} className="btn btn-xs btn-outline btn-primary">
+                                                                Tugaskan
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    title="Tidak Ada Tugas"
+                                    message="Belum ada tugas pemasangan atau perbaikan yang masuk."
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <Modal show={showAssignModal} onClose={closeModal}>
+            <Modal show={!!showAssignModal} onClose={closeModal}>
                 <form onSubmit={submitAssignment} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
                         Tugaskan Teknisi
