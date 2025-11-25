@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardRedirectController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\ClientManagementController;
 use App\Http\Controllers\Admin\TechnicianManagementController;
@@ -23,6 +24,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// --- PUBLIC ROUTES ---
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -33,29 +36,37 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', DashboardRedirectController::class)
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// --- SOCIALITE AUTH ---
 
 Route::get('/auth/google/redirect', [SocialiteController::class, 'redirectToGoogle'])->name('socialite.google.redirect');
 Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCallback'])->name('socialite.google.callback');
 
-Route::middleware('auth')->group(function () {
+// --- AUTHENTICATED ROUTES ---
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    
+    // Dashboard Redirect Logic
+    Route::get('/dashboard', DashboardRedirectController::class)->name('dashboard');
+
+    // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
     Route::get('/profile/complete', [ProfileController::class, 'edit'])->name('profile.complete');
 
-    // --- RUTE ADMIN ---
-    Route::middleware(['auth', 'can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
-        
-        Route::resource('packages', PackageController::class)->except(['show']);
-        
-        Route::resource('clients', ClientManagementController::class)->except(['show']);
-        
-        Route::resource('technicians', TechnicianManagementController::class)->except(['show', 'create', 'edit']);
+    // Notifications
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
+    // --- ADMIN ROUTES ---
+    Route::middleware(['can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
+        
+        // Master Data
+        Route::resource('packages', PackageController::class)->except(['show']);
+        Route::resource('clients', ClientManagementController::class)->except(['show']);
+        Route::resource('technicians', TechnicianManagementController::class)->except(['show', 'create', 'edit']);
+        Route::resource('equipment', EquipmentController::class)->except(['show']);
+
+        // Business Logic
         Route::get('subscriptions', [SubscriptionManagementController::class, 'index'])->name('subscriptions.index');
         Route::post('subscriptions/{subscription}/invoice', [SubscriptionManagementController::class, 'storeInstallationInvoice'])->name('subscriptions.storeInvoice');
 
@@ -65,15 +76,13 @@ Route::middleware('auth')->group(function () {
         Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index');
         Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update');
 
-        Route::resource('equipment', EquipmentController::class)->except(['show']);
-
+        // Reporting & Logs
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     });
 
-    // --- RUTE CLIENT ---
-    Route::middleware(['auth', 'can:is-client'])->prefix('client')->name('client.')->group(function () {
+    // --- CLIENT ROUTES ---
+    Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
         
         Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
         Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
@@ -85,8 +94,8 @@ Route::middleware('auth')->group(function () {
         Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
     });
 
-    // --- RUTE TEKNISI ---
-    Route::middleware(['auth', 'can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
+    // --- TEKNISI ROUTES ---
+    Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
         
         Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
         Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');

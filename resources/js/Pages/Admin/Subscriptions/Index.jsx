@@ -14,6 +14,7 @@ export default function Index({ auth, subscriptions }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         subscription_id: '',
         user_name: '',
+        package_name: '',
         amount: '',
     });
 
@@ -21,7 +22,8 @@ export default function Index({ auth, subscriptions }) {
         setData({
             subscription_id: sub.id,
             user_name: sub.user_name,
-            amount: '',
+            package_name: sub.package_name,
+            amount: sub.package_price,
         });
         setShowInvoiceModal(sub.id);
     };
@@ -77,7 +79,10 @@ export default function Index({ auth, subscriptions }) {
                                                         <div className="font-bold">{sub.user_name}</div>
                                                         <div className="text-xs opacity-50">{sub.user_email}</div>
                                                     </td>
-                                                    <td>{sub.package_name}</td>
+                                                    <td>
+                                                        <div className="font-bold">{sub.package_name}</div>
+                                                        <div className="text-xs">Rp {parseFloat(sub.package_price).toLocaleString('id-ID')}</div>
+                                                    </td>
                                                     <td>
                                                         <span className={getStatusBadge(sub.status)}>
                                                             {sub.status}
@@ -113,27 +118,37 @@ export default function Index({ auth, subscriptions }) {
             <Modal show={!!showInvoiceModal} onClose={closeModal}>
                 <form onSubmit={submitCreateInvoice} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
-                        Buat Tagihan Instalasi untuk {data.user_name}
+                        Konfirmasi Tagihan Instalasi
                     </h2>
                     <p className="mt-1 text-sm text-gray-600">
-                        Masukkan jumlah biaya pemasangan untuk klien ini. Tagihan akan otomatis dibuat dan statusnya 'pending'.
+                        Sistem akan membuat tagihan otomatis berdasarkan harga paket yang dipilih oleh <strong>{data.user_name}</strong>.
                     </p>
+                    
                     <div className="mt-6">
-                        <InputLabel htmlFor="amount" value="Jumlah (Rp)" />
+                        <InputLabel value="Paket yang Dipilih" />
+                        <TextInput
+                            value={data.package_name}
+                            className="mt-1 block w-full bg-gray-100 text-gray-500"
+                            disabled
+                        />
+                    </div>
+
+                    <div className="mt-4">
+                        <InputLabel htmlFor="amount" value="Total Tagihan (Rp)" />
                         <TextInput
                             id="amount"
                             type="number"
                             value={data.amount}
-                            onChange={(e) => setData('amount', e.target.value)}
-                            className="mt-1 block w-full"
-                            required
+                            className="mt-1 block w-full bg-gray-100 font-bold text-gray-800"
+                            disabled
                         />
-                        <InputError message={errors.amount} className="mt-2" />
+                        <p className="text-xs text-gray-500 mt-1">*Harga diambil otomatis dari database paket.</p>
                     </div>
+
                     <div className="mt-6 flex justify-end">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton className="ml-3" disabled={processing}>
-                            Buat Tagihan
+                            Kirim Tagihan
                         </PrimaryButton>
                     </div>
                 </form>

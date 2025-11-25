@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
@@ -39,6 +42,13 @@ class ComplaintController extends Controller
             'status' => 'pending',
         ]);
 
-        return Redirect::route('client.complaints.index');
+        $admins = User::where('role', 'administrator')->get();
+        Notification::send($admins, new SystemAlert(
+            'Aduan Baru: ' . $request->title,
+            route('admin.tasks.index'),
+            'task'
+        ));
+
+        return Redirect::route('client.complaints.index')->with('success', 'Aduan berhasil dikirim.');
     }
 }

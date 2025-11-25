@@ -25,6 +25,7 @@ class SubscriptionManagementController extends Controller
                 'user_name' => $sub->user->name,
                 'user_email' => $sub->user->email,
                 'package_name' => $sub->package->name,
+                'package_price' => $sub->package->price,
                 'status' => $sub->status,
                 'created_at' => $sub->created_at->format('d M Y H:i'),
                 'has_installation_invoice' => $sub->user->invoices()
@@ -37,10 +38,6 @@ class SubscriptionManagementController extends Controller
 
     public function storeInstallationInvoice(Request $request, Subscription $subscription)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:0',
-        ]);
-
         $user = $subscription->user;
 
         $existingInvoice = $user->invoices()
@@ -53,11 +50,13 @@ class SubscriptionManagementController extends Controller
                 ->with('error', 'Klien ini sudah memiliki tagihan instalasi.');
         }
 
+        $amount = $subscription->package->price;
+
         $invoice = Invoice::create([
             'user_id' => $user->id,
             'subscription_id' => $subscription->id,
             'invoice_number' => 'INV-' . time() . '-' . $user->id,
-            'amount' => $request->amount,
+            'amount' => $amount,
             'status' => 'pending',
             'type' => 'installation',
             'due_date' => now()->addDays(7),
@@ -65,6 +64,7 @@ class SubscriptionManagementController extends Controller
 
         $user->notify(new NewInvoiceNotification($invoice));
 
-        return Redirect::route('admin.subscriptions.index');
+        return Redirect::route('admin.subscriptions.index')
+            ->with('success', 'Tagihan instalasi berhasil dibuat senilai Rp ' . number_format($amount, 0, ',', '.'));
     }
 }

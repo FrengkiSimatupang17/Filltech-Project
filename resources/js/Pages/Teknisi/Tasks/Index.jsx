@@ -1,7 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 
 export default function Index({ auth, tasks }) {
 
@@ -17,10 +16,10 @@ export default function Index({ auth, tasks }) {
 
     const getStatusClass = (status) => {
         switch (status) {
-            case 'assigned': return 'bg-blue-100 text-blue-800';
-            case 'in_progress': return 'bg-indigo-100 text-indigo-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'assigned': return 'badge badge-info text-white font-bold border-none';
+            case 'in_progress': return 'badge badge-primary text-white font-bold border-none';
+            case 'completed': return 'badge badge-success text-white font-bold border-none';
+            default: return 'badge badge-ghost';
         }
     };
 
@@ -33,49 +32,81 @@ export default function Index({ auth, tasks }) {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900 space-y-6">
-                            {tasks.length === 0 ? (
-                                <p>Tidak ada tugas yang ditugaskan kepada Anda saat ini.</p>
-                            ) : (
-                                tasks.map((task) => (
-                                    <div key={task.id} className="p-4 border rounded-lg">
-                                        <div className="flex flex-col md:flex-row justify-between md:items-start">
+                    <div className="space-y-6">
+                        {tasks.length === 0 ? (
+                            <div className="text-center py-10 bg-white rounded-lg shadow-sm border border-gray-200">
+                                <p className="text-gray-500">Tidak ada tugas yang ditugaskan kepada Anda saat ini.</p>
+                            </div>
+                        ) : (
+                            tasks.map((task) => (
+                                <div key={task.id} className="card bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                    <div className="card-body p-6">
+                                        <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
                                             <div className="flex-1">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(task.status)}`}>
-                                                    {task.status}
-                                                </span>
-                                                <h3 className="text-lg font-medium text-gray-900 mt-2">{task.title}</h3>
-                                                <p className="mt-1 text-sm text-gray-600">{task.description}</p>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={getStatusClass(task.status)}>
+                                                        {task.status.replace('_', ' ').toUpperCase()}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400 font-mono">#{task.id}</span>
+                                                </div>
                                                 
-                                                <div className="mt-4 border-t pt-4">
-                                                    <h4 className="text-sm font-medium text-gray-700">Detail Klien</h4>
-                                                    <p className="text-sm text-gray-600">Nama: {task.client_name}</p>
-                                                    <p className="text-sm text-gray-600">Alamat: {task.client_address}</p>
-                                                    <p className="text-sm text-gray-600">Telepon: {task.client_phone}</p>
+                                                <h3 className="text-lg font-bold text-gray-900">{task.title}</h3>
+                                                <p className="mt-1 text-sm text-gray-600 leading-relaxed">{task.description}</p>
+                                                
+                                                <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-3 rounded-lg">
+                                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Detail Klien</h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-400 block text-xs">Nama</span>
+                                                            <span className="font-medium text-gray-800">{task.client_name}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-400 block text-xs">Telepon</span>
+                                                            <span className="font-medium text-gray-800">{task.client_phone || '-'}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-400 block text-xs">Alamat</span>
+                                                            <span className="font-medium text-gray-800">{task.client_address || '-'}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex-shrink-0 mt-4 md:mt-0 md:ml-6">
+                                            <div className="flex-shrink-0 flex flex-col gap-3 min-w-[160px] md:border-l md:pl-4 md:border-gray-100">
+                                                <div className="text-xs text-gray-400 uppercase font-bold text-center md:text-left mb-1">Aksi</div>
+                                                
                                                 {task.status === 'assigned' && (
                                                     <PrimaryButton onClick={() => handleStatusUpdate(task, 'in_progress')} className="w-full justify-center">
                                                         Mulai Kerjakan
                                                     </PrimaryButton>
                                                 )}
+                                                
                                                 {task.status === 'in_progress' && (
-                                                    <SecondaryButton onClick={() => handleStatusUpdate(task, 'completed')} className="w-full justify-center bg-green-600 text-white hover:bg-green-700">
+                                                    // PERBAIKAN UTAMA:
+                                                    // Menggunakan kelas Tailwind manual (bg-green-600) dan border-none
+                                                    // untuk memastikan tombol solid dan terlihat jelas.
+                                                    <button 
+                                                        onClick={() => handleStatusUpdate(task, 'completed')} 
+                                                        className="btn btn-sm bg-green-600 hover:bg-green-700 text-white w-full border-none shadow-sm font-bold tracking-wide"
+                                                    >
                                                         Selesaikan Tugas
-                                                    </SecondaryButton>
+                                                    </button>
                                                 )}
+                                                
                                                 {task.status === 'completed' && (
-                                                    <p className="text-sm font-medium text-green-700">Tugas Selesai</p>
+                                                    <div className="flex items-center justify-center gap-2 text-green-700 font-bold p-2 bg-green-50 rounded-lg border border-green-200 w-full">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span>Selesai</span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

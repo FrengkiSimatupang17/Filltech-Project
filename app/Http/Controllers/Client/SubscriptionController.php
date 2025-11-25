@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\Subscription;
+use App\Models\User;
+use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
 
 class SubscriptionController extends Controller
 {
@@ -54,6 +57,13 @@ class SubscriptionController extends Controller
             'status' => 'pending',
         ]);
 
-        return Redirect::route('client.subscribe.index');
+        $admins = User::where('role', 'administrator')->get();
+        Notification::send($admins, new SystemAlert(
+            'Permintaan Langganan Baru dari ' . $user->name,
+            route('admin.subscriptions.index'),
+            'subscription'
+        ));
+
+        return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim.');
     }
 }

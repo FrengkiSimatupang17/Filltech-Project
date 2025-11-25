@@ -17,7 +17,8 @@ import {
     ClockIcon,
     WrenchScrewdriverIcon,
     UserIcon,
-    ArrowLeftOnRectangleIcon // Ikon Logout
+    ArrowLeftOnRectangleIcon,
+    UserCircleIcon
 } from '@heroicons/react/24/outline';
 
 export default function SideBar({ user }) {
@@ -59,22 +60,22 @@ export default function SideBar({ user }) {
     if (user.role === 'teknisi') navLinks = teknisiLinks;
 
     return (
-        // PERBAIKAN: min-h-screen agar sidebar selalu full ke bawah
-        <div className="min-h-screen flex flex-col bg-gray-900 text-white">
+        <div className="min-h-screen flex flex-col bg-gray-900 text-white border-r border-gray-800">
             
             {/* Logo Area */}
-            <div className="flex items-center justify-center h-20 border-b border-gray-800 bg-gray-900">
-                <Link href="/" className="flex items-center gap-3">
+            <div className="flex items-center justify-center h-16 flex-shrink-0 border-b border-gray-800 bg-gray-900">
+                {/* PERUBAHAN: href diarahkan ke route('dashboard') */}
+                <Link href={route('dashboard')} className="flex items-center gap-3">
                     <ApplicationLogo className="block h-8 w-auto text-blue-500 fill-current" />
                     <span className="text-xl font-bold tracking-wide text-white">FILLTECH</span>
                 </Link>
             </div>
             
             {/* Menu Area (Scrollable) */}
-            <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-thin scrollbar-thumb-gray-700">
+            <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-thin scrollbar-thumb-gray-700">
                 {navLinks.map((link, index) => (
                     link.label ? (
-                        <div key={index} className="px-4 mt-8 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        <div key={index} className="px-4 mt-6 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
                             {link.label}
                         </div>
                     ) : (
@@ -90,29 +91,40 @@ export default function SideBar({ user }) {
                 ))}
             </div>
 
-            {/* User Info Bottom (Fixed at bottom) */}
-            <div className="p-4 border-t border-gray-800 bg-gray-800/50">
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold shadow-lg">
+            {/* User Profile & Actions Area (Fixed Bottom) */}
+            <div className="p-4 border-t border-gray-800 bg-gray-900">
+                
+                {/* Info User Singkat */}
+                <div className="flex items-center gap-3 mb-4 px-2">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold shadow-sm">
                         {user.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                        <div className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                            <p className="text-xs text-gray-400 truncate capitalize">{user.role}</p>
-                        </div>
+                        <p className="text-xs text-gray-400 truncate capitalize">{user.role}</p>
                     </div>
                 </div>
-                <Link 
-                    href={route('logout')} 
-                    method="post" 
-                    as="button" 
-                    className="btn btn-outline btn-error btn-sm w-full flex items-center gap-2 text-white hover:bg-red-600 hover:border-red-600"
-                >
-                    <ArrowLeftOnRectangleIcon className="w-4 h-4" />
-                    Log Out
-                </Link>
+
+                {/* Tombol Aksi: Profile & Logout */}
+                <div className="space-y-2">
+                    <Link 
+                        href={route('profile.edit')} 
+                        className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-800 hover:text-white transition-colors"
+                    >
+                        <UserCircleIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-white" />
+                        Pengaturan Profil
+                    </Link>
+
+                    <Link 
+                        href={route('logout')} 
+                        method="post" 
+                        as="button" 
+                        className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                    >
+                        <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-red-500" />
+                        Log Out
+                    </Link>
+                </div>
             </div>
         </div>
     );

@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\User;
+use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
 {
@@ -16,7 +18,7 @@ class PaymentController extends Controller
     {
         $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
-            'payment_proof' => 'required|file|image|max:2048', // 2MB Max
+            'payment_proof' => 'required|file|image|max:2048',
         ]);
 
         $invoice = Invoice::findOrFail($request->invoice_id);
@@ -40,6 +42,13 @@ class PaymentController extends Controller
             'status' => 'pending',
         ]);
 
-        return Redirect::route('client.invoices.index');
+        $admins = User::where('role', 'administrator')->get();
+        Notification::send($admins, new SystemAlert(
+            'Verifikasi Pembayaran Baru: Rp ' . number_format($invoice->amount, 0, ',', '.'),
+            route('admin.payments.index'),
+            'payment'
+        ));
+
+        return Redirect::route('client.invoices.index')->with('success', 'Bukti pembayaran berhasil diunggah.');
     }
 }

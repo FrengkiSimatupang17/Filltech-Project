@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileUpdateRequest extends FormRequest
 {
@@ -18,6 +19,7 @@ class ProfileUpdateRequest extends FormRequest
             'rw' => ['nullable', 'string', 'max:3'],
             'blok' => ['nullable', 'string', 'max:10'],
             'nomor_rumah' => ['nullable', 'string', 'max:10'],
+            'password' => ['nullable', 'confirmed', Password::defaults()], 
         ];
     }
 }
