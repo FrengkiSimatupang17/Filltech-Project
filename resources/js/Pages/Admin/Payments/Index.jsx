@@ -1,7 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
-import PrimaryButton from '@/Components/PrimaryButton';
-import DangerButton from '@/Components/DangerButton';
 import Pagination from '@/Components/Pagination';
 import EmptyState from '@/Components/EmptyState';
 
@@ -19,9 +17,9 @@ export default function Index({ auth, pending_payments }) {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'pending': return 'badge badge-warning';
-            case 'verified': return 'badge badge-success text-white';
-            case 'rejected': return 'badge badge-error text-white';
+            case 'pending': return 'badge badge-warning font-bold';
+            case 'verified': return 'badge badge-success text-white font-bold';
+            case 'rejected': return 'badge badge-error text-white font-bold';
             default: return 'badge badge-ghost';
         }
     };
@@ -38,7 +36,6 @@ export default function Index({ auth, pending_payments }) {
                     
                     {pending_payments.data.length > 0 ? (
                         <>
-                            {/* Desktop Table View */}
                             <div className="hidden md:block card bg-base-100 shadow-xl">
                                 <div className="card-body p-0">
                                     <table className="table table-zebra w-full">
@@ -64,13 +61,13 @@ export default function Index({ auth, pending_payments }) {
                                                         <div className="text-xs capitalize badge badge-ghost badge-sm mt-1">{payment.invoice_type}</div>
                                                     </td>
                                                     <td>
-                                                        <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="link link-primary text-xs">
+                                                        <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="link link-primary text-xs font-bold">
                                                             Lihat Foto
                                                         </a>
                                                     </td>
                                                     <td>
                                                         <span className={getStatusBadge(payment.status)}>
-                                                            {payment.status}
+                                                            {payment.status.toUpperCase()}
                                                         </span>
                                                     </td>
                                                     <td className="text-right space-x-2">
@@ -88,7 +85,6 @@ export default function Index({ auth, pending_payments }) {
                                 </div>
                             </div>
 
-                            {/* Mobile Card View */}
                             <div className="md:hidden space-y-4 px-4 sm:px-0">
                                 {pending_payments.data.map((payment) => (
                                     <div key={payment.id} className="card bg-base-100 shadow-md border border-base-200">
@@ -98,7 +94,7 @@ export default function Index({ auth, pending_payments }) {
                                                     <h3 className="font-bold text-gray-800">{payment.user_name}</h3>
                                                     <p className="text-xs text-gray-500">{payment.invoice_number}</p>
                                                 </div>
-                                                <span className={getStatusBadge(payment.status)}>{payment.status}</span>
+                                                <span className={getStatusBadge(payment.status)}>{payment.status.toUpperCase()}</span>
                                             </div>
 
                                             <div className="py-3 border-t border-base-200 space-y-2 text-sm">
@@ -112,7 +108,7 @@ export default function Index({ auth, pending_payments }) {
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-gray-500">Bukti:</span>
-                                                    <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline">Lihat</a>
+                                                    <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline">Lihat Bukti</a>
                                                 </div>
                                             </div>
 
