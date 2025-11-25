@@ -17,10 +17,8 @@ class SubscriptionManagementController extends Controller
         $subscriptions = Subscription::with(['user', 'package'])
             ->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc')
-            ->get();
-
-        return Inertia::render('Admin/Subscriptions/Index', [
-            'subscriptions' => $subscriptions->map(fn ($sub) => [
+            ->paginate(10)
+            ->through(fn ($sub) => [
                 'id' => $sub->id,
                 'user_name' => $sub->user->name,
                 'user_email' => $sub->user->email,
@@ -32,7 +30,10 @@ class SubscriptionManagementController extends Controller
                     ->where('type', 'installation')
                     ->whereIn('status', ['pending', 'paid'])
                     ->exists(),
-            ]),
+            ]);
+
+        return Inertia::render('Admin/Subscriptions/Index', [
+            'subscriptions' => $subscriptions,
         ]);
     }
 

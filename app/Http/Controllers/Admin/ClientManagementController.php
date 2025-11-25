@@ -15,8 +15,10 @@ class ClientManagementController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Admin/Clients/Index', [
-            'users' => User::where('role', 'client')->orderBy('name')->get()->map(fn ($user) => [
+        $users = User::where('role', 'client')
+            ->orderBy('name')
+            ->paginate(10)
+            ->through(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -27,7 +29,10 @@ class ClientManagementController extends Controller
                 'rw' => $user->rw,
                 'blok' => $user->blok,
                 'nomor_rumah' => $user->nomor_rumah,
-            ]),
+            ]);
+
+        return Inertia::render('Admin/Clients/Index', [
+            'users' => $users,
         ]);
     }
 

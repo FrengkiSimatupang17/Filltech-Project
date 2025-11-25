@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class PackageController extends Controller
@@ -14,10 +13,12 @@ class PackageController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Packages/Index', [
-            'packages' => Package::orderBy('name')->get(),
+            // PERBAIKAN: Menggunakan paginate(10) alih-alih get()
+            'packages' => Package::orderBy('name')->paginate(10),
         ]);
     }
 
+    // ... (method store, update, destroy tetap sama, tidak perlu diubah)
     public function store(Request $request)
     {
         $request->validate([
