@@ -10,7 +10,8 @@ import InputError from '@/Components/InputError';
 import DangerButton from '@/Components/DangerButton';
 import TextArea from '@/Components/TextArea';
 import EmptyState from '@/Components/EmptyState';
-import Pagination from '@/Components/Pagination'; // Import Komponen Baru
+import Pagination from '@/Components/Pagination';
+import InputCurrency from '@/Components/InputCurrency';
 
 export default function Index({ auth, packages }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -91,7 +92,6 @@ export default function Index({ auth, packages }) {
                     
                     {packages.data.length > 0 ? (
                         <>
-                            {/* --- TAMPILAN DESKTOP (TABLE) --- */}
                             <div className="hidden md:block card bg-base-100 shadow-xl">
                                 <div className="card-body p-0">
                                     <table className="table table-zebra w-full">
@@ -124,7 +124,6 @@ export default function Index({ auth, packages }) {
                                 </div>
                             </div>
 
-                            {/* --- TAMPILAN MOBILE (STACKED CARDS) --- */}
                             <div className="md:hidden space-y-4 px-4 sm:px-0">
                                 {packages.data.map((pkg) => (
                                     <div key={pkg.id} className="card bg-base-100 shadow-md border border-base-200">
@@ -155,7 +154,6 @@ export default function Index({ auth, packages }) {
                                 ))}
                             </div>
 
-                            {/* Pagination Link */}
                             <Pagination links={packages.links} />
                         </>
                     ) : (
@@ -171,7 +169,6 @@ export default function Index({ auth, packages }) {
                 </div>
             </div>
 
-            {/* Modal Create/Edit */}
             <Modal show={showCreateModal || !!showEditModal} onClose={closeModal}>
                 <form onSubmit={showCreateModal ? submitCreate : submitEdit} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">
@@ -185,8 +182,14 @@ export default function Index({ auth, packages }) {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <InputLabel htmlFor="price" value="Harga (Rp)" />
-                                <TextInput id="price" type="number" value={data.price} onChange={(e) => setData('price', e.target.value)} className="mt-1 block w-full" required />
+                                <InputLabel htmlFor="price" value="Harga" />
+                                <InputCurrency 
+                                    id="price" 
+                                    value={data.price} 
+                                    onValueChange={(val) => setData('price', val)} 
+                                    className="mt-1 block w-full" 
+                                    required 
+                                />
                                 <InputError message={errors.price} className="mt-1" />
                             </div>
                             <div>
@@ -210,7 +213,6 @@ export default function Index({ auth, packages }) {
                 </form>
             </Modal>
 
-            {/* Modal Delete */}
             <Modal show={!!showDeleteModal} onClose={closeModal}>
                 <form onSubmit={submitDelete} className="p-6 text-center">
                     <h2 className="text-lg font-bold text-gray-900">Hapus Paket?</h2>
