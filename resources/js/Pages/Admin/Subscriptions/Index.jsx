@@ -76,7 +76,7 @@ export default function Index({ auth, subscriptions }) {
                                         </thead>
                                         <tbody>
                                             {subscriptions.data.map((sub) => (
-                                                <tr key={sub.id}>
+                                                <tr key={sub.id} className="hover">
                                                     <td>
                                                         <div className="font-bold">{sub.user_name}</div>
                                                         <div className="text-xs opacity-50">{sub.user_email}</div>
@@ -93,7 +93,7 @@ export default function Index({ auth, subscriptions }) {
                                                     <td className="text-sm">{sub.created_at}</td>
                                                     <td className="text-right">
                                                         {sub.status === 'pending' && !sub.has_installation_invoice && (
-                                                            <button onClick={() => openInvoiceModal(sub)} className="btn btn-xs btn-outline btn-primary">
+                                                            <button onClick={() => openInvoiceModal(sub)} className="btn btn-xs btn-primary">
                                                                 Buat Tagihan
                                                             </button>
                                                         )}
@@ -166,7 +166,7 @@ export default function Index({ auth, subscriptions }) {
             <Modal show={!!showInvoiceModal} onClose={closeModal}>
                 <form onSubmit={submitCreateInvoice} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-2">
-                        Konfirmasi Tagihan
+                        Konfirmasi Tagihan Instalasi
                     </h2>
                     <p className="mb-6 text-sm text-gray-600">
                         Sistem akan membuat tagihan otomatis untuk <strong>{data.user_name}</strong>.

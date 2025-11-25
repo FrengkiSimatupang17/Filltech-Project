@@ -18,18 +18,20 @@ export default function Index({ auth, users }) {
         id: '',
         name: '',
         email: '',
+        role: 'client',
+        id_unik: '',
         phone_number: '',
         rt: '',
         rw: '',
         blok: '',
         nomor_rumah: '',
-        id_unik: '',
         password: '',
         password_confirmation: '',
     });
 
     const openCreateModal = () => {
         reset();
+        setData('role', 'client');
         setShowCreateModal(true);
     };
 
@@ -38,12 +40,13 @@ export default function Index({ auth, users }) {
             id: user.id,
             name: user.name,
             email: user.email,
+            role: user.role,
+            id_unik: user.id_unik || '',
             phone_number: user.phone_number || '',
             rt: user.rt || '',
             rw: user.rw || '',
             blok: user.blok || '',
             nomor_rumah: user.nomor_rumah || '',
-            id_unik: user.id_unik || '',
             password: '',
             password_confirmation: '',
         });
@@ -113,7 +116,7 @@ export default function Index({ auth, users }) {
                                         </thead>
                                         <tbody>
                                             {users.data.map((user) => (
-                                                <tr key={user.id}>
+                                                <tr key={user.id} className="hover">
                                                     <td className="font-bold">{user.name}</td>
                                                     <td>{user.email}</td>
                                                     <td>
@@ -137,21 +140,18 @@ export default function Index({ auth, users }) {
                                     <div key={user.id} className="card bg-base-100 shadow-md border border-base-200">
                                         <div className="card-body p-5">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-bold text-lg text-gray-800">{user.name}</h3>
+                                                <div>
+                                                    <h3 className="font-bold text-lg text-gray-800">{user.name}</h3>
+                                                    <p className="text-xs text-gray-500">{user.email}</p>
+                                                </div>
                                                 <span className={user.id_unik ? 'badge badge-sm badge-success text-white' : 'badge badge-sm badge-warning'}>
                                                     {user.id_unik ? 'LENGKAP' : 'PENDING'}
                                                 </span>
                                             </div>
                                             
-                                            <div className="text-sm text-gray-600 space-y-1">
-                                                <p className="flex justify-between">
-                                                    <span className="text-gray-400">Email:</span>
-                                                    <span>{user.email}</span>
-                                                </p>
-                                                <p className="flex justify-between">
-                                                    <span className="text-gray-400">ID Unik:</span>
-                                                    <span className="font-mono">{user.id_unik || '-'}</span>
-                                                </p>
+                                            <div className="text-sm text-gray-600 mt-2 border-t border-base-200 pt-2">
+                                                <span className="text-gray-400 text-xs uppercase font-bold">ID Unik:</span>
+                                                <div className="font-mono text-base">{user.id_unik || '-'}</div>
                                             </div>
 
                                             <div className="card-actions justify-end mt-4 pt-2 border-t border-base-200">
