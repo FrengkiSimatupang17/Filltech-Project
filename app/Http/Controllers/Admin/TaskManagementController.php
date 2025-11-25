@@ -16,12 +16,8 @@ class TaskManagementController extends Controller
         $tasks = Task::with(['clientUser', 'technicianUser'])
             ->orderByRaw("CASE WHEN status = 'pending' THEN 1 WHEN status = 'assigned' THEN 2 ELSE 3 END")
             ->orderBy('created_at', 'desc')
-            ->get();
-
-        $teknisi = User::where('role', 'teknisi')->orderBy('name')->get(['id', 'name']);
-
-        return Inertia::render('Admin/Tasks/Index', [
-            'tasks' => $tasks->map(fn ($task) => [
+            ->paginate(10)
+            ->through(fn ($task) => [
                 'id' => $task->id,
                 'title' => $task->title,
                 'description' => $task->description,
@@ -30,7 +26,12 @@ class TaskManagementController extends Controller
                 'client_name' => $task->clientUser?->name,
                 'technician_name' => $task->technicianUser?->name,
                 'created_at' => $task->created_at->format('d M Y'),
-            ]),
+            ]);
+
+        $teknisi = User::where('role', 'teknisi')->orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('Admin/Tasks/Index', [
+            'tasks' => $tasks,
             'teknisi' => $teknisi,
         ]);
     }
@@ -51,6 +52,6 @@ class TaskManagementController extends Controller
             'status' => 'assigned',
         ]);
 
-        return Redirect::route('admin.tasks.index');
+        return Redirect::route('admin.tasks.index')->with('success', 'Tugas berhasil dialokasikan.');
     }
 }

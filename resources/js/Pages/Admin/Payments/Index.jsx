@@ -2,6 +2,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
+import Pagination from '@/Components/Pagination';
+import EmptyState from '@/Components/EmptyState';
 
 export default function Index({ auth, pending_payments }) {
 
@@ -15,6 +17,15 @@ export default function Index({ auth, pending_payments }) {
         }
     };
 
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'pending': return 'badge badge-warning';
+            case 'verified': return 'badge badge-success text-white';
+            case 'rejected': return 'badge badge-error text-white';
+            default: return 'badge badge-ghost';
+        }
+    };
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -22,63 +33,108 @@ export default function Index({ auth, pending_payments }) {
         >
             <Head title="Verifikasi Pembayaran" />
 
-            <div className="py-12">
+            <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            {pending_payments.length === 0 ? (
-                                <p>Tidak ada pembayaran yang menunggu verifikasi.</p>
-                            ) : (
-                                <div className="space-y-6">
-                                    {pending_payments.map((payment) => (
-                                        <div key={payment.id} className="p-4 border rounded-lg grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                                            <div className="md:col-span-1 space-y-2">
+                    
+                    {pending_payments.data.length > 0 ? (
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block card bg-base-100 shadow-xl">
+                                <div className="card-body p-0">
+                                    <table className="table table-zebra w-full">
+                                        <thead className="bg-base-200 text-base-content">
+                                            <tr>
+                                                <th className="p-4 rounded-tl-xl">Klien</th>
+                                                <th className="p-4">Info Tagihan</th>
+                                                <th className="p-4">Bukti</th>
+                                                <th className="p-4">Status</th>
+                                                <th className="p-4 text-right rounded-tr-xl">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pending_payments.data.map((payment) => (
+                                                <tr key={payment.id}>
+                                                    <td>
+                                                        <div className="font-bold">{payment.user_name}</div>
+                                                        <div className="text-xs opacity-50">{payment.user_email}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="font-bold">{payment.invoice_number}</div>
+                                                        <div className="text-xs">Rp {parseFloat(payment.amount).toLocaleString('id-ID')}</div>
+                                                        <div className="text-xs capitalize badge badge-ghost badge-sm mt-1">{payment.invoice_type}</div>
+                                                    </td>
+                                                    <td>
+                                                        <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="link link-primary text-xs">
+                                                            Lihat Foto
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <span className={getStatusBadge(payment.status)}>
+                                                            {payment.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="text-right space-x-2">
+                                                        {payment.status === 'pending' && (
+                                                            <>
+                                                                <button onClick={() => handleVerification(payment.id, 'approve')} className="btn btn-xs btn-success text-white">Setujui</button>
+                                                                <button onClick={() => handleVerification(payment.id, 'reject')} className="btn btn-xs btn-error text-white">Tolak</button>
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-4 px-4 sm:px-0">
+                                {pending_payments.data.map((payment) => (
+                                    <div key={payment.id} className="card bg-base-100 shadow-md border border-base-200">
+                                        <div className="card-body p-5">
+                                            <div className="flex justify-between items-start mb-3">
                                                 <div>
-                                                    <div className="text-xs text-gray-500">Klien</div>
-                                                    <div className="font-medium">{payment.user_name}</div>
-                                                    <div className="text-sm text-gray-600">{payment.user_email}</div>
+                                                    <h3 className="font-bold text-gray-800">{payment.user_name}</h3>
+                                                    <p className="text-xs text-gray-500">{payment.invoice_number}</p>
                                                 </div>
-                                                <div>
-                                                    <div className="text-xs text-gray-500">No. Tagihan</div>
-                                                    <div className="font-medium">{payment.invoice_number}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-xs text-gray-500">Jumlah</div>
-                                                    <div className="font-bold text-lg text-indigo-700">
-                                                        Rp {parseFloat(payment.amount).toLocaleString('id-ID')}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-xs text-gray-500">Jenis</div>
-                                                    <div className="text-sm font-medium capitalize">{payment.invoice_type}</div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="md:col-span-1">
-                                                <div className="text-xs text-gray-500 mb-1">Bukti Pembayaran</div>
-                                                <a href={payment.payment_proof_url} target="_blank" rel="noopener noreferrer">
-                                                    <img 
-                                                        src={payment.payment_proof_url} 
-                                                        alt="Bukti Pembayaran"
-                                                        className="rounded-lg border max-w-full h-auto cursor-pointer hover:opacity-80 transition-opacity"
-                                                    />
-                                                </a>
+                                                <span className={getStatusBadge(payment.status)}>{payment.status}</span>
                                             </div>
 
-                                            <div className="md:col-span-1 flex flex-col md:items-end justify-center space-y-3">
-                                                <PrimaryButton onClick={() => handleVerification(payment.id, 'approve')} className="w-full md:w-auto justify-center">
-                                                    Setujui
-                                                </PrimaryButton>
-                                                <DangerButton onClick={() => handleVerification(payment.id, 'reject')} className="w-full md:w-auto justify-center">
-                                                    Tolak
-                                                </DangerButton>
+                                            <div className="py-3 border-t border-base-200 space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-500">Jumlah:</span>
+                                                    <span className="font-bold">Rp {parseFloat(payment.amount).toLocaleString('id-ID')}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-500">Tipe:</span>
+                                                    <span className="capitalize">{payment.invoice_type}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500">Bukti:</span>
+                                                    <a href={payment.payment_proof_url} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline">Lihat</a>
+                                                </div>
                                             </div>
+
+                                            {payment.status === 'pending' && (
+                                                <div className="grid grid-cols-2 gap-3 mt-2 pt-3 border-t border-base-200">
+                                                    <button onClick={() => handleVerification(payment.id, 'approve')} className="btn btn-sm btn-success text-white">Setujui</button>
+                                                    <button onClick={() => handleVerification(payment.id, 'reject')} className="btn btn-sm btn-error text-white">Tolak</button>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <Pagination links={pending_payments.links} />
+                        </>
+                    ) : (
+                        <EmptyState
+                            title="Tidak Ada Pembayaran"
+                            message="Belum ada pembayaran baru yang perlu diverifikasi."
+                        />
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>
