@@ -15,19 +15,28 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
-        $paidInvoices = Invoice::where('status', 'paid')
-            ->whereBetween('paid_at', [$startDate, Carbon::parse($endDate)->endOfDay()])
-            ->orderBy('paid_at', 'desc')
-            ->get();
+        $query = Invoice::where('status', 'paid')
+            ->whereBetween('paid_at', [$startDate, Carbon::parse($endDate)->endOfDay()]);
 
-        $totalRevenue = $paidInvoices->sum('amount');
-        $totalInvoices = $paidInvoices->count();
+        $totalRevenue = $query->sum('amount');
+        $totalInvoices = $query->count();
 
-        $dailyBreakdown = $paidInvoices->groupBy(function ($invoice) {
-            return Carbon::parse($invoice->paid_at)->format('Y-m-d');
-        })->map(function ($day) {
-            return $day->sum('amount');
-        });
+        $dailyBreakdown = (clone $query)->get(['paid_at', 'amount'])
+            ->groupBy(function ($invoice) {
+                return Carbon::parse($invoice->paid_at)->format('Y-m-d');
+            })->map(function ($day) {
+                return $day->sum('amount');
+            });
+
+        $transactions = $query->orderBy('paid_at', 'desc')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn ($inv) => [
+                'id' => $inv->id,
+                'invoice_number' => $inv->invoice_number,
+                'paid_at' => Carbon::parse($inv->paid_at)->translatedFormat('d M Y, H:i'),
+                'amount' => $inv->amount,
+            ]);
 
         return Inertia::render('Admin/Reports/Index', [
             'reports' => [
@@ -36,12 +45,7 @@ class ReportController extends Controller
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'daily_breakdown' => $dailyBreakdown,
-                'recent_transactions' => $paidInvoices->take(20)->map(fn ($inv) => [
-                    'id' => $inv->id,
-                    'invoice_number' => $inv->invoice_number,
-                    'paid_at' => Carbon::parse($inv->paid_at)->format('d M Y H:i'),
-                    'amount' => $inv->amount,
-                ]),
+                'transactions' => $transactions,
             ],
         ]);
     }

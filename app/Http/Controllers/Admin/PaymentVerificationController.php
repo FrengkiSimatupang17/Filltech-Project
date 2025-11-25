@@ -24,19 +24,18 @@ class PaymentVerificationController extends Controller
             ->paginate(10)
             ->through(fn ($payment) => [
                 'id' => $payment->id,
-                'user_name' => $payment->user->name,
-                'user_email' => $payment->user->email,
-                'invoice_number' => $payment->invoice->invoice_number,
-                'invoice_type' => $payment->invoice->type,
+                'user_name' => $payment->user->name ?? 'User Terhapus',
+                'user_email' => $payment->user->email ?? '-',
+                'invoice_number' => $payment->invoice->invoice_number ?? '-',
+                'invoice_type' => $payment->invoice->type ?? 'general',
                 'amount' => $payment->amount,
                 'status' => $payment->status,
-                'payment_proof_path' => $payment->payment_proof_path, 
-                'payment_proof_url' => Storage::url($payment->payment_proof_path),
-                'created_at' => $payment->created_at->format('d M Y H:i'),
+                'payment_proof_url' => $payment->payment_proof_path ? Storage::url($payment->payment_proof_path) : null,
+                'created_at' => $payment->created_at->translatedFormat('d M Y, H:i'),
             ]);
 
         return Inertia::render('Admin/Payments/Index', [
-            'pending_payments' => $payments,
+            'payments' => $payments,
         ]);
     }
 
@@ -47,15 +46,15 @@ class PaymentVerificationController extends Controller
         ]);
 
         if ($payment->status !== 'pending') {
-            return Redirect::route('admin.payments.index')->with('error', 'Pembayaran ini sudah diproses.');
+            return Redirect::back()->with('error', 'Pembayaran ini sudah diproses sebelumnya.');
         }
 
         if ($request->action === 'approve') {
             $this->approvePayment($payment);
-            return Redirect::route('admin.payments.index')->with('success', 'Pembayaran berhasil diverifikasi.');
+            return Redirect::back()->with('success', 'Pembayaran berhasil disetujui.');
         } else {
             $this->rejectPayment($payment);
-            return Redirect::route('admin.payments.index')->with('success', 'Pembayaran ditolak.');
+            return Redirect::back()->with('success', 'Pembayaran telah ditolak.');
         }
     }
 
@@ -69,20 +68,27 @@ class PaymentVerificationController extends Controller
             ]);
 
             $invoice = $payment->invoice;
-            $invoice->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
+            if ($invoice) {
+                $invoice->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
+            }
 
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($payment)
-                ->log("Menyetujui pembayaran untuk tagihan {$invoice->invoice_number}");
+            if (function_exists('activity')) {
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($payment)
+                    ->log("Menyetujui pembayaran " . ($invoice->invoice_number ?? ''));
+            }
 
-            $payment->user->notify(new PaymentVerifiedNotification($payment));
+            if ($payment->user) {
+                $payment->user->notify(new PaymentVerifiedNotification($payment));
+            }
 
-            if ($invoice->type === 'installation' && $invoice->subscription_id) {
+            if ($invoice && $invoice->type === 'installation' && $invoice->subscription_id) {
                 $subscription = Subscription::find($invoice->subscription_id);
+                
                 if ($subscription && $subscription->status === 'pending') {
                     $subscription->update([
                         'status' => 'active',
@@ -92,10 +98,11 @@ class PaymentVerificationController extends Controller
                     Task::create([
                         'client_user_id' => $subscription->user_id,
                         'assigned_by_admin_id' => Auth::id(),
-                        'title' => 'Pemasangan Baru - ' . $subscription->user->name,
-                        'description' => 'Lakukan pemasangan baru untuk ' . $subscription->user->name . ' (' . $subscription->package->name . ')',
+                        'title' => 'Pemasangan Baru - ' . ($subscription->user->name ?? 'Client'),
+                        'description' => 'Lakukan pemasangan WiFi paket ' . ($subscription->package->name ?? 'Unknown'),
                         'type' => 'installation',
                         'status' => 'pending',
+                        'priority' => 'high',
                     ]);
                 }
             }
@@ -109,10 +116,12 @@ class PaymentVerificationController extends Controller
             'verified_at' => now(),
             'verified_by_admin_id' => Auth::id(),
         ]);
-
-        activity()
-            ->causedBy(Auth::user())
-            ->performedOn($payment)
-            ->log("Menolak pembayaran untuk tagihan {$payment->invoice->invoice_number}");
+        
+        if (function_exists('activity')) {
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($payment)
+                ->log("Menolak pembayaran ID: {$payment->id}");
+        }
     }
 }
