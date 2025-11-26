@@ -12,12 +12,25 @@ use Inertia\Inertia;
 
 class SubscriptionManagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subscriptions = Subscription::with(['user', 'package'])
-            ->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
+        $query = Subscription::with(['user', 'package']);
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('user', function ($u) use ($request) {
+                    $u->where('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('email', 'like', '%' . $request->search . '%');
+                })->orWhereHas('package', function ($p) use ($request) {
+                    $p->where('name', 'like', '%' . $request->search . '%');
+                });
+            });
+        }
+
+        $subscriptions = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc')
             ->paginate(10)
+            ->withQueryString()
             ->through(fn ($sub) => [
                 'id' => $sub->id,
                 'user_name' => $sub->user->name,
@@ -25,7 +38,7 @@ class SubscriptionManagementController extends Controller
                 'package_name' => $sub->package->name,
                 'package_price' => $sub->package->price,
                 'status' => $sub->status,
-                'created_at' => $sub->created_at->format('d M Y H:i'),
+                'created_at' => $sub->created_at->translatedFormat('d M Y'),
                 'has_installation_invoice' => $sub->user->invoices()
                     ->where('type', 'installation')
                     ->whereIn('status', ['pending', 'paid'])
@@ -34,6 +47,7 @@ class SubscriptionManagementController extends Controller
 
         return Inertia::render('Admin/Subscriptions/Index', [
             'subscriptions' => $subscriptions,
+            'filters' => $request->only(['search']),
         ]);
     }
 

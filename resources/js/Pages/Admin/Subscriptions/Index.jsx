@@ -1,23 +1,33 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
-import InputError from '@/Components/InputError';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
+import { FaSearch, FaFileInvoiceDollar, FaCheckCircle } from 'react-icons/fa';
 
-export default function Index({ auth, subscriptions }) {
+export default function Index({ auth, subscriptions, filters }) {
     const [showInvoiceModal, setShowInvoiceModal] = useState(null);
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [search, setSearch] = useState(filters.search || '');
+
+    const { data, setData, post, processing, reset } = useForm({
         subscription_id: '',
         user_name: '',
         package_name: '',
         amount: '',
     });
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        router.get(route('admin.subscriptions.index'), { search }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
     const openInvoiceModal = (sub) => {
         setData({
@@ -43,12 +53,14 @@ export default function Index({ auth, subscriptions }) {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'pending': return 'badge badge-warning font-bold';
-            case 'active': return 'badge badge-success text-white font-bold';
-            case 'cancelled': return 'badge badge-error text-white font-bold';
-            default: return 'badge badge-ghost';
+            case 'pending': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">PENDING</span>;
+            case 'active': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">AKTIF</span>;
+            case 'cancelled': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">BATAL</span>;
+            default: return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
         }
     };
+
+    const formatRupiah = (value) => `Rp ${parseFloat(value).toLocaleString('id-ID')}`;
 
     return (
         <AuthenticatedLayout
@@ -60,104 +72,119 @@ export default function Index({ auth, subscriptions }) {
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <form onSubmit={handleSearch} className="w-full md:w-1/3 flex">
+                            <TextInput
+                                type="text"
+                                className="w-full rounded-r-none"
+                                placeholder="Cari nama klien atau paket..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            <PrimaryButton className="rounded-l-none justify-center px-4">
+                                <FaSearch />
+                            </PrimaryButton>
+                        </form>
+                    </div>
+
                     {subscriptions.data.length > 0 ? (
                         <>
-                            <div className="hidden md:block card bg-base-100 shadow-xl">
-                                <div className="card-body p-0">
-                                    <table className="table table-zebra w-full">
-                                        <thead className="bg-base-200 text-base-content">
-                                            <tr>
-                                                <th className="p-4 rounded-tl-xl">Klien</th>
-                                                <th className="p-4">Paket</th>
-                                                <th className="p-4">Status</th>
-                                                <th className="p-4">Tanggal Daftar</th>
-                                                <th className="p-4 text-right rounded-tr-xl">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {subscriptions.data.map((sub) => (
-                                                <tr key={sub.id} className="hover">
-                                                    <td>
-                                                        <div className="font-bold">{sub.user_name}</div>
-                                                        <div className="text-xs opacity-50">{sub.user_email}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="font-bold">{sub.package_name}</div>
-                                                        <div className="text-xs">Rp {parseFloat(sub.package_price).toLocaleString('id-ID')}</div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={getStatusBadge(sub.status)}>
-                                                            {sub.status.toUpperCase()}
+                            <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klien</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paket</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Daftar</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {subscriptions.data.map((sub) => (
+                                            <tr key={sub.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-bold text-gray-900">{sub.user_name}</div>
+                                                    <div className="text-xs text-gray-500">{sub.user_email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-medium text-gray-800">{sub.package_name}</div>
+                                                    <div className="text-xs text-green-600 font-bold">{formatRupiah(sub.package_price)}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {getStatusBadge(sub.status)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {sub.created_at}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    {sub.status === 'pending' && !sub.has_installation_invoice && (
+                                                        <PrimaryButton onClick={() => openInvoiceModal(sub)} className="text-xs h-8 bg-blue-600 hover:bg-blue-700">
+                                                            Buat Tagihan
+                                                        </PrimaryButton>
+                                                    )}
+                                                    {sub.has_installation_invoice && (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                            <FaFileInvoiceDollar className="mr-1" /> Tagihan Terkirim
                                                         </span>
-                                                    </td>
-                                                    <td className="text-sm">{sub.created_at}</td>
-                                                    <td className="text-right">
-                                                        {sub.status === 'pending' && !sub.has_installation_invoice && (
-                                                            <button onClick={() => openInvoiceModal(sub)} className="btn btn-xs btn-primary">
-                                                                Buat Tagihan
-                                                            </button>
-                                                        )}
-                                                        {sub.has_installation_invoice && (
-                                                            <span className="badge badge-ghost badge-sm">Tagihan Terkirim</span>
-                                                        )}
-                                                        {sub.status === 'active' && (
-                                                            <span className="text-success text-xs font-bold">AKTIF</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                    )}
+                                                    {sub.status === 'active' && (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-green-600 bg-green-50">
+                                                            <FaCheckCircle className="mr-1" /> Aktif
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <div className="md:hidden space-y-4 px-4 sm:px-0">
+                            <div className="md:hidden space-y-4">
                                 {subscriptions.data.map((sub) => (
-                                    <div key={sub.id} className="card bg-base-100 shadow-md border border-base-200">
-                                        <div className="card-body p-5">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <h3 className="font-bold text-lg text-gray-800">{sub.user_name}</h3>
-                                                    <p className="text-xs text-gray-500">{sub.user_email}</p>
-                                                </div>
-                                                <span className={getStatusBadge(sub.status)}>
-                                                    {sub.status.toUpperCase()}
-                                                </span>
+                                    <div key={sub.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="font-bold text-lg text-gray-800">{sub.user_name}</h3>
+                                                <p className="text-xs text-gray-500">{sub.user_email}</p>
                                             </div>
-                                            
-                                            <div className="text-sm text-gray-600 space-y-2 border-t border-base-200 pt-3">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-400">Paket:</span>
-                                                    <span className="font-bold">{sub.package_name}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-400">Harga:</span>
-                                                    <span>Rp {parseFloat(sub.package_price).toLocaleString('id-ID')}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-400">Tanggal:</span>
-                                                    <span>{sub.created_at}</span>
-                                                </div>
-                                            </div>
-
-                                            {sub.status === 'pending' && !sub.has_installation_invoice && (
-                                                <div className="card-actions justify-end mt-4 pt-2 border-t border-base-200">
-                                                    <button onClick={() => openInvoiceModal(sub)} className="btn btn-sm btn-primary w-full">
-                                                        Buat Tagihan Instalasi
-                                                    </button>
-                                                </div>
-                                            )}
+                                            {getStatusBadge(sub.status)}
                                         </div>
+                                        
+                                        <div className="text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-3 mt-3">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">Paket:</span>
+                                                <span className="font-bold">{sub.package_name}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">Harga:</span>
+                                                <span className="text-green-600 font-bold">{formatRupiah(sub.package_price)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">Tanggal:</span>
+                                                <span>{sub.created_at}</span>
+                                            </div>
+                                        </div>
+
+                                        {sub.status === 'pending' && !sub.has_installation_invoice && (
+                                            <div className="mt-4 pt-3 border-t border-gray-100">
+                                                <PrimaryButton onClick={() => openInvoiceModal(sub)} className="w-full justify-center text-sm">
+                                                    Buat Tagihan Instalasi
+                                                </PrimaryButton>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
 
-                            <Pagination links={subscriptions.links} />
+                            <div className="mt-6">
+                                <Pagination links={subscriptions.links} />
+                            </div>
                         </>
                     ) : (
                         <EmptyState
                             title="Tidak Ada Langganan"
-                            message="Belum ada klien yang mendaftar paket WiFi."
+                            message={search ? `Tidak ada langganan dengan kata kunci "${search}"` : "Belum ada klien yang mendaftar paket WiFi."}
                         />
                     )}
                 </div>
@@ -186,8 +213,8 @@ export default function Index({ auth, subscriptions }) {
                             <InputLabel htmlFor="amount" value="Total Tagihan (Rp)" />
                             <TextInput
                                 id="amount"
-                                type="number"
-                                value={data.amount}
+                                type="text"
+                                value={formatRupiah(data.amount)}
                                 className="mt-1 block w-full bg-gray-100 font-bold text-gray-800 cursor-not-allowed"
                                 disabled
                             />
