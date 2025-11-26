@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController; // Controller baru untuk Grafik
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\PackageController;
@@ -45,8 +46,8 @@ Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCa
 
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard Redirect Logic
-    Route::get('/dashboard', DashboardRedirectController::class)->name('dashboard');
+    // Dashboard Redirect Logic (DIGANTI SEMENTARA KE DASHBOARD BARU)
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

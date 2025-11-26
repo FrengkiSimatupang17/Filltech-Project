@@ -5,8 +5,9 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import EmptyState from '@/Components/EmptyState';
+import Pagination from '@/Components/Pagination';
 
-export default function Index({ auth, reports }) {
+export default function ReportIndex({ auth, reports }) {
     const [dates, setDates] = useState({
         start_date: reports.start_date,
         end_date: reports.end_date,
@@ -24,12 +25,12 @@ export default function Index({ auth, reports }) {
         });
     };
 
+    const formatRupiah = (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+
     const StatCard = ({ title, value }) => (
-        <div className="card bg-base-100 shadow-xl border border-base-200">
-            <div className="card-body p-6">
-                <div className="stat-title text-gray-500 font-medium uppercase text-xs tracking-wider">{title}</div>
-                <div className="stat-value text-primary mt-1">{value}</div>
-            </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{title}</div>
+            <div className="text-2xl font-bold text-gray-800">{value}</div>
         </div>
     );
 
@@ -43,42 +44,40 @@ export default function Index({ auth, reports }) {
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                     
-                    <div className="card bg-base-100 shadow-md">
-                        <div className="card-body p-6">
-                            <form onSubmit={handleFilterSubmit} className="flex flex-col md:flex-row md:items-end gap-4">
-                                <div className="w-full md:w-auto">
-                                    <InputLabel htmlFor="start_date" value="Tanggal Mulai" />
-                                    <TextInput
-                                        id="start_date"
-                                        name="start_date"
-                                        type="date"
-                                        className="mt-1 block w-full"
-                                        value={dates.start_date}
-                                        onChange={handleDateChange}
-                                    />
-                                </div>
-                                <div className="w-full md:w-auto">
-                                    <InputLabel htmlFor="end_date" value="Tanggal Selesai" />
-                                    <TextInput
-                                        id="end_date"
-                                        name="end_date"
-                                        type="date"
-                                        className="mt-1 block w-full"
-                                        value={dates.end_date}
-                                        onChange={handleDateChange}
-                                    />
-                                </div>
-                                <PrimaryButton type="submit" className="w-full md:w-auto justify-center">
-                                    Terapkan Filter
-                                </PrimaryButton>
-                            </form>
-                        </div>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <form onSubmit={handleFilterSubmit} className="flex flex-col md:flex-row md:items-end gap-4">
+                            <div className="w-full md:w-auto">
+                                <InputLabel htmlFor="start_date" value="Tanggal Mulai" />
+                                <TextInput
+                                    id="start_date"
+                                    name="start_date"
+                                    type="date"
+                                    className="mt-1 block w-full"
+                                    value={dates.start_date}
+                                    onChange={handleDateChange}
+                                />
+                            </div>
+                            <div className="w-full md:w-auto">
+                                <InputLabel htmlFor="end_date" value="Tanggal Selesai" />
+                                <TextInput
+                                    id="end_date"
+                                    name="end_date"
+                                    type="date"
+                                    className="mt-1 block w-full"
+                                    value={dates.end_date}
+                                    onChange={handleDateChange}
+                                />
+                            </div>
+                            <PrimaryButton type="submit" className="w-full md:w-auto justify-center h-[42px]">
+                                Terapkan Filter
+                            </PrimaryButton>
+                        </form>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <StatCard
                             title="Total Pendapatan (Periode Ini)"
-                            value={`Rp ${parseFloat(reports.total_revenue).toLocaleString('id-ID')}`}
+                            value={formatRupiah(reports.total_revenue)}
                         />
                         <StatCard
                             title="Total Transaksi Berhasil"
@@ -86,44 +85,71 @@ export default function Index({ auth, reports }) {
                         />
                     </div>
 
-                    <div className="card bg-base-100 shadow-xl">
-                        <div className="card-body p-0">
-                            <div className="p-4 border-b border-base-200 bg-base-200/50 rounded-t-xl">
-                                <h3 className="font-bold text-gray-700">Transaksi Terbaru</h3>
-                            </div>
-                            
-                            {reports.recent_transactions.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="table table-zebra w-full">
-                                        <thead>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                            <h3 className="font-bold text-gray-800">Riwayat Transaksi</h3>
+                        </div>
+                        
+                        {/* PASTIKAN CONTROLLER MENGIRIM PAGINATION AGAR .data ADA */}
+                        {reports.transactions.data.length > 0 ? (
+                            <>
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
                                             <tr>
-                                                <th className="pl-6">No. Tagihan</th>
-                                                <th>Tanggal Bayar</th>
-                                                <th className="pr-6 text-right">Jumlah</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Tagihan</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Bayar</th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {reports.recent_transactions.map((tx) => (
-                                                <tr key={tx.id}>
-                                                    <td className="pl-6 font-mono font-bold text-xs sm:text-sm">{tx.invoice_number}</td>
-                                                    <td className="text-sm">{tx.paid_at}</td>
-                                                    <td className="pr-6 text-right font-bold text-success">
-                                                        Rp {parseFloat(tx.amount).toLocaleString('id-ID')}
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {reports.transactions.data.map((tx) => (
+                                                <tr key={tx.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        {tx.invoice_number}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {tx.paid_at}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-600">
+                                                        {formatRupiah(tx.amount)}
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-                            ) : (
-                                <EmptyState
-                                    title="Tidak Ada Data"
-                                    message="Tidak ada transaksi yang ditemukan pada periode ini."
-                                />
-                            )}
-                        </div>
-                    </div>
 
+                                <div className="md:hidden divide-y divide-gray-100">
+                                    {reports.transactions.data.map((tx) => (
+                                        <div key={tx.id} className="p-4 bg-white">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="font-mono text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">
+                                                    {tx.invoice_number}
+                                                </span>
+                                                <span className="text-xs text-gray-500">{tx.paid_at}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3">
+                                                <span className="text-sm text-gray-500">Total Bayar</span>
+                                                <span className="text-lg font-bold text-green-600">
+                                                    {formatRupiah(tx.amount)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 border-t border-gray-100">
+                                    <Pagination links={reports.transactions.links} />
+                                </div>
+                            </>
+                        ) : (
+                            <EmptyState
+                                title="Tidak Ada Data"
+                                message="Tidak ada transaksi yang ditemukan pada periode ini."
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

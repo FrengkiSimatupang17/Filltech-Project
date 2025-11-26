@@ -1,104 +1,97 @@
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { 
-    BanknotesIcon, 
-    UserGroupIcon, 
-    ClipboardDocumentCheckIcon, 
-    ExclamationCircleIcon, 
-    ArrowRightIcon 
-} from '@heroicons/react/24/outline';
+import StatCard from '@/Components/Dashboard/StatCard';
+import RevenueChart from '@/Components/Dashboard/RevenueChart';
+import { FaWallet, FaClipboardCheck, FaUserPlus, FaTasks, FaWifi, FaUsers } from 'react-icons/fa';
 
-export default function AdminDashboard({ auth, stats }) {
-
-    const StatCard = ({ title, value, link, icon: Icon, color }) => {
-        return (
-            <div className="card bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4" style={{ borderColor: color }}>
-                <div className="card-body p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">{title}</h3>
-                            <p className="text-3xl font-extrabold text-gray-800 mt-2">{value}</p>
-                        </div>
-                        <div className={`p-3 rounded-full bg-opacity-10`} style={{ backgroundColor: color }}>
-                            <Icon className="w-8 h-8" style={{ color: color }} />
-                        </div>
-                    </div>
-                    {link && (
-                        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
-                            <Link href={link} className="text-sm font-medium flex items-center gap-1 hover:underline" style={{ color: color }}>
-                                Lihat Detail <ArrowRightIcon className="w-4 h-4" />
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
+export default function AdminDashboard({ auth, stats, chart }) {
+    
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+        }).format(number);
     };
 
     return (
         <AuthenticatedLayout
             user={auth.user}
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}
         >
-            <Head title="Admin Dashboard" />
+            <Head title="Dashboard Admin" />
 
-            <div className="py-6 px-4 sm:px-6 lg:px-8">
-                
-                {/* --- HEADER SECTION (Gaya Welcome Page) --- */}
-                <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-900 p-6 sm:p-10 text-white shadow-xl mb-8 relative overflow-hidden">
-                    <div className="relative z-10">
-                        <h2 className="text-3xl font-bold mb-2">Selamat Datang, Administrator!</h2>
-                        <p className="text-blue-100 text-lg">Berikut adalah ringkasan aktivitas bisnis Filltech hari ini.</p>
+            <div className="py-8">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    
+                    {/* Welcome Banner */}
+                    <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-2xl p-8 mb-8 text-white shadow-lg relative overflow-hidden">
+                        <div className="relative z-10">
+                            <h1 className="text-3xl font-bold mb-2">Selamat Datang, {auth.user.name}!</h1>
+                            <p className="text-blue-100 opacity-90">Berikut ringkasan aktivitas bisnis hari ini.</p>
+                        </div>
+                        <div className="absolute right-0 top-0 h-full w-1/3 bg-white opacity-5 transform skew-x-12"></div>
                     </div>
-                    {/* Dekorasi Background */}
-                    <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-yellow-400 opacity-20 rounded-full blur-2xl"></div>
-                </div>
 
-                {/* --- STATS GRID --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard 
-                        title="Verifikasi Pembayaran" 
-                        value={stats.pending_payments} 
-                        link={route('admin.payments.index')}
-                        icon={BanknotesIcon}
-                        color="#2563eb" // Blue
-                    />
-                    <StatCard 
-                        title="Tugas Pending" 
-                        value={stats.pending_tasks} 
-                        link={route('admin.tasks.index')} 
-                        icon={ClipboardDocumentCheckIcon}
-                        color="#f59e0b" // Amber/Yellow
-                    />
-                    <StatCard 
-                        title="Klien Baru (Bulan Ini)" 
-                        value={stats.new_clients_monthly} 
-                        link={route('admin.clients.index')} 
-                        icon={UserGroupIcon}
-                        color="#10b981" // Green
-                    />
-                    <StatCard 
-                        title="Pendapatan (Bulan Ini)" 
-                        value={`Rp ${parseFloat(stats.monthly_revenue).toLocaleString('id-ID')}`} 
-                        link={route('admin.reports.index')}
-                        icon={BanknotesIcon}
-                        color="#7c3aed" // Violet
-                    />
-                </div>
-                
-                {/* --- SECTION BAWAH (Contoh Layout Tambahan) --- */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                    <div className="card bg-white shadow-md border border-gray-100">
-                        <div className="card-body">
-                            <h3 className="card-title text-gray-700 mb-4">Aksi Cepat</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Link href={route('admin.clients.index')} className="btn btn-outline btn-primary">Tambah Klien</Link>
-                                <Link href={route('admin.packages.index')} className="btn btn-outline btn-secondary">Kelola Paket</Link>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <StatCard title="Verifikasi Pembayaran" value={stats?.pending_payments || 0} icon={FaClipboardCheck} color="blue" />
+                        <StatCard title="Tugas Pending" value={stats?.pending_tasks || 0} icon={FaTasks} color="yellow" />
+                        <StatCard title="Klien Baru" value={stats?.new_clients_monthly || 0} icon={FaUserPlus} color="green" />
+                        <StatCard title="Pendapatan" value={formatRupiah(stats?.monthly_revenue || 0)} icon={FaWallet} color="purple" />
+                    </div>
+
+                    {/* Split View */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        {/* Aksi Cepat */}
+                        <div className="lg:col-span-1 flex flex-col gap-6">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
+                                <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Aksi Cepat</h3>
+                                <div className="space-y-4">
+                                    <Link href={route('admin.clients.create')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-lg transition-colors border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white p-2 rounded-md shadow-sm text-blue-500"><FaUserPlus /></div>
+                                            <span className="font-semibold text-sm">Tambah Klien</span>
+                                        </div>
+                                        <span>→</span>
+                                    </Link>
+                                    <Link href={route('admin.packages.index')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-purple-50 text-gray-700 hover:text-purple-600 rounded-lg transition-colors border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white p-2 rounded-md shadow-sm text-purple-500"><FaWifi /></div>
+                                            <span className="font-semibold text-sm">Kelola Paket</span>
+                                        </div>
+                                        <span>→</span>
+                                    </Link>
+                                    <Link href={route('admin.technicians.index')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-600 rounded-lg transition-colors border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white p-2 rounded-md shadow-sm text-green-500"><FaUsers /></div>
+                                            <span className="font-semibold text-sm">Data Teknisi</span>
+                                        </div>
+                                        <span>→</span>
+                                    </Link>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Grafik */}
+                        <div className="lg:col-span-2">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800">Analitik Pendapatan</h3>
+                                        <p className="text-sm text-gray-400 mt-1">Tren pemasukan 12 bulan terakhir</p>
+                                    </div>
+                                </div>
+                                
+                                {/* CONTAINER HEIGHT WAJIB ADA */}
+                                <div className="w-full h-80">
+                                    <RevenueChart data={chart} />
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-
             </div>
         </AuthenticatedLayout>
     );
