@@ -10,15 +10,28 @@ use Inertia\Inertia;
 
 class PackageController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Package::query();
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('speed', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $packages = $query->orderBy('price', 'asc')
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Admin/Packages/Index', [
-            // PERBAIKAN: Menggunakan paginate(10) alih-alih get()
-            'packages' => Package::orderBy('name')->paginate(10),
+            'packages' => $packages,
+            'filters' => $request->only(['search']),
         ]);
     }
 
-    // ... (method store, update, destroy tetap sama, tidak perlu diubah)
     public function store(Request $request)
     {
         $request->validate([

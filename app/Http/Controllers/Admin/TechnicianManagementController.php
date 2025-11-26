@@ -13,15 +13,34 @@ use Inertia\Inertia;
 
 class TechnicianManagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Admin/Technicians/Index', [
-            'users' => User::where('role', 'teknisi')->orderBy('name')->get()->map(fn ($user) => [
+        $query = User::where('role', 'teknisi');
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('id_unik', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $users = $query->orderBy('name')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'role' => $user->role,
+                'id_unik' => $user->id_unik,
                 'phone_number' => $user->phone_number,
-            ]),
+                'created_at' => $user->created_at->translatedFormat('d M Y'),
+            ]);
+
+        return Inertia::render('Admin/Technicians/Index', [
+            'users' => $users,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -31,6 +50,7 @@ class TechnicianManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::min(8)],
+            'id_unik' => 'required|string|max:100|unique:users',
             'phone_number' => 'nullable|string|max:20',
         ]);
 
@@ -39,35 +59,37 @@ class TechnicianManagementController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'teknisi',
+            'id_unik' => $request->id_unik,
             'phone_number' => $request->phone_number,
         ]);
 
         return Redirect::route('admin.technicians.index')->with('success', 'Teknisi baru berhasil ditambahkan!');
     }
-
-    public function update(Request $request, User $user)
+    
+    public function update(Request $request, User $technician)
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($technician->id)],
             'password' => ['nullable', 'confirmed', Password::min(8)],
+            'id_unik' => ['required', 'string', 'max:100', Rule::unique('users')->ignore($technician->id)],
             'phone_number' => 'nullable|string|max:20',
         ]);
-        
-        $user->fill($request->except('password'));
+
+        $technician->fill($request->except('password'));
 
         if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
+            $technician->password = Hash::make($request->password);
         }
 
-        $user->save();
+        $technician->save();
 
         return Redirect::route('admin.technicians.index')->with('success', 'Data teknisi berhasil diperbarui.');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $technician)
     {
-        $user->delete();
+        $technician->delete();
 
         return Redirect::route('admin.technicians.index')->with('success', 'Akun teknisi berhasil dihapus.');
     }

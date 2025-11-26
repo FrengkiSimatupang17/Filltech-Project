@@ -11,10 +11,22 @@ use Inertia\Inertia;
 
 class EquipmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Equipment::query();
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('serial_number', 'like', '%' . $request->search . '%');
+            });
+        }
+
         return Inertia::render('Admin/Equipment/Index', [
-            'equipment' => Equipment::orderBy('name')->get(),
+            'equipment' => $query->orderBy('name')
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -28,7 +40,7 @@ class EquipmentController extends Controller
 
         Equipment::create($request->all());
 
-        return Redirect::route('admin.equipment.index');
+        return Redirect::route('admin.equipment.index')->with('success', 'Alat berhasil ditambahkan.');
     }
 
     public function update(Request $request, Equipment $equipment)
@@ -41,13 +53,13 @@ class EquipmentController extends Controller
 
         $equipment->update($request->all());
 
-        return Redirect::route('admin.equipment.index');
+        return Redirect::route('admin.equipment.index')->with('success', 'Data alat berhasil diperbarui.');
     }
 
     public function destroy(Equipment $equipment)
     {
         $equipment->delete();
 
-        return Redirect::route('admin.equipment.index');
+        return Redirect::route('admin.equipment.index')->with('success', 'Alat berhasil dihapus.');
     }
 }
