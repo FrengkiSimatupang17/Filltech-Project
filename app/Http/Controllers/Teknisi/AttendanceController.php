@@ -23,11 +23,23 @@ class AttendanceController extends Controller
 
         $history = Attendance::where('technician_user_id', $teknisiId)
             ->orderBy('clock_in', 'desc')
-            ->paginate(10);
+            ->paginate(10)
+            ->through(fn ($att) => [
+                'id' => $att->id,
+                'date' => $att->clock_in->translatedFormat('l, d F Y'),
+                'clock_in' => $att->clock_in->translatedFormat('H:i:s'),
+                'clock_out' => $att->clock_out ? $att->clock_out->translatedFormat('H:i:s') : '-',
+            ]);
+
+        $todayAttendanceData = $todayAttendance ? [
+            'id' => $todayAttendance->id,
+            'clock_in' => $todayAttendance->clock_in->translatedFormat('d F Y, H:i'),
+            'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->translatedFormat('d F Y, H:i') : null,
+        ] : null;
 
         return Inertia::render('Teknisi/Attendance/Index', [
             'isClockedIn' => $isClockedIn,
-            'todayAttendance' => $todayAttendance,
+            'todayAttendance' => $todayAttendanceData,
             'history' => $history,
         ]);
     }
@@ -51,6 +63,6 @@ class AttendanceController extends Controller
             ]);
         }
 
-        return Redirect::route('teknisi.attendance.index');
+        return Redirect::route('teknisi.attendance.index')->with('success', 'Absensi berhasil dicatat.');
     }
 }

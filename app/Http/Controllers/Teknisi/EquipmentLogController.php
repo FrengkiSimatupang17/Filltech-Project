@@ -13,28 +13,54 @@ use Inertia\Inertia;
 
 class EquipmentLogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $teknisiId = Auth::id();
+        $search = $request->search;
 
-        $availableEquipment = Equipment::where('status', 'available')->orderBy('name')->get();
+        $availableEquipmentQuery = Equipment::where('status', 'available');
+
+        // Search for Available equipment (optional)
+        if ($search) {
+            $availableEquipmentQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('serial_number', 'like', '%' . $search . '%');
+            });
+        }
+
+        $availableEquipment = $availableEquipmentQuery->orderBy('name')->get();
         
         $myBorrowedEquipment = EquipmentLog::with('equipment')
             ->where('technician_user_id', $teknisiId)
             ->whereNull('returned_at')
             ->orderBy('borrowed_at', 'desc')
-            ->get();
+            ->get()
+            ->map(fn ($log) => [
+                'id' => $log->id,
+                'equipment_name' => $log->equipment->name,
+                'serial_number' => $log->equipment->serial_number,
+                'borrowed_at' => $log->borrowed_at->translatedFormat('d M Y, H:i'),
+            ]);
 
         $myHistory = EquipmentLog::with('equipment')
             ->where('technician_user_id', $teknisiId)
             ->whereNotNull('returned_at')
             ->orderBy('borrowed_at', 'desc')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn ($log) => [
+                'id' => $log->id,
+                'equipment_name' => $log->equipment->name,
+                'serial_number' => $log->equipment->serial_number,
+                'borrowed_at' => $log->borrowed_at->translatedFormat('d M Y, H:i'),
+                'returned_at' => $log->returned_at->translatedFormat('d M Y, H:i'),
+            ]);
 
         return Inertia::render('Teknisi/Equipment/Index', [
             'availableEquipment' => $availableEquipment,
             'myBorrowedEquipment' => $myBorrowedEquipment,
             'myHistory' => $myHistory,
+            'filters' => $request->only('search'),
         ]);
     }
 
@@ -47,11 +73,11 @@ class EquipmentLogController extends Controller
         $teknisiId = Auth::id();
         $equipmentId = $request->equipment_id;
 
-        DB::transaction(function () use ($teknisiId, $equipmentId) {
+        $response = DB::transaction(function () use ($teknisiId, $equipmentId) {
             $equipment = Equipment::where('id', $equipmentId)->where('status', 'available')->lockForUpdate()->first();
 
             if (!$equipment) {
-                return Redirect::back()->with('error', 'Alat tidak tersedia atau sudah dipinjam.');
+                return ['error' => 'Alat tidak tersedia atau sudah dipinjam.'];
             }
 
             EquipmentLog::create([
@@ -61,9 +87,14 @@ class EquipmentLogController extends Controller
             ]);
 
             $equipment->update(['status' => 'in_use']);
+            return ['success' => 'Peminjaman alat berhasil dicatat.'];
         });
 
-        return Redirect::route('teknisi.equipment.index');
+        if (isset($response['error'])) {
+            return Redirect::back()->with('error', $response['error']);
+        }
+
+        return Redirect::route('teknisi.equipment.index')->with('success', $response['success']);
     }
 
     public function update(Request $request, EquipmentLog $equipmentLog)
@@ -72,15 +103,16 @@ class EquipmentLogController extends Controller
             abort(403);
         }
 
-        DB::transaction(function () use ($equipmentLog) {
+        $response = DB::transaction(function () use ($equipmentLog) {
             $equipmentLog->update(['returned_at' => now()]);
 
             $equipment = $equipmentLog->equipment;
             if ($equipment->status === 'in_use') {
                 $equipment->update(['status' => 'available']);
             }
+            return ['success' => 'Pengembalian alat berhasil dicatat.'];
         });
 
-        return Redirect::route('teknisi.equipment.index');
+        return Redirect::route('teknisi.equipment.index')->with('success', $response['success']);
     }
 }

@@ -14,16 +14,32 @@ use Inertia\Inertia;
 
 class ComplaintController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $myComplaints = Task::with('technicianUser')
+        $query = Task::with('technician')
             ->where('client_user_id', Auth::id())
-            ->where('type', 'repair')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->where('type', 'repair');
+
+        if ($request->has('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+        }
+
+        $complaints = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn ($task) => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'status' => $task->status,
+                'technician_name' => $task->technician ? $task->technician->name : null,
+                'created_at' => $task->created_at->translatedFormat('d M Y'),
+            ]);
 
         return Inertia::render('Client/Complaints/Index', [
-            'complaints' => $myComplaints,
+            'complaints' => $complaints,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -49,6 +65,6 @@ class ComplaintController extends Controller
             'task'
         ));
 
-        return Redirect::route('client.complaints.index')->with('success', 'Aduan berhasil dikirim.');
+        return Redirect::route('client.complaints.index')->with('success', 'Aduan berhasil dikirim. Teknisi akan segera merespons.');
     }
 }

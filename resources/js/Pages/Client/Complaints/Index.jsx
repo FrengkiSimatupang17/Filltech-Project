@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -8,13 +8,26 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import TextArea from '@/Components/TextArea';
+import Pagination from '@/Components/Pagination';
+import EmptyState from '@/Components/EmptyState';
+import { FaSearch, FaPlus, FaExclamationCircle, FaUserCog } from 'react-icons/fa';
 
-export default function Index({ auth, complaints }) {
+export default function Index({ auth, complaints, filters }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [search, setSearch] = useState(filters.search || '');
+
     const { data, setData, post, processing, errors, reset } = useForm({
         title: '',
         description: '',
     });
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        router.get(route('client.complaints.index'), { search }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
     const openCreateModal = () => {
         reset();
@@ -33,14 +46,13 @@ export default function Index({ auth, complaints }) {
         });
     };
 
-    const getStatusClass = (status) => {
+    const getStatusBadge = (status) => {
         switch (status) {
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'assigned': return 'bg-blue-100 text-blue-800';
-            case 'in_progress': return 'bg-indigo-100 text-indigo-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'pending': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">MENUNGGU</span>;
+            case 'assigned': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">DIPROSES</span>;
+            case 'in_progress': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">PENGERJAAN</span>;
+            case 'completed': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">SELESAI</span>;
+            default: return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
         }
     };
 
@@ -49,74 +61,147 @@ export default function Index({ auth, complaints }) {
             user={auth.user}
             header={
                 <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">Aduan & Kendala</h2>
-                    <PrimaryButton onClick={openCreateModal}>Buat Aduan Baru</PrimaryButton>
+                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">Layanan Aduan</h2>
+                    <PrimaryButton onClick={openCreateModal} className="hidden md:flex">
+                        <FaPlus className="mr-2" /> Buat Aduan
+                    </PrimaryButton>
                 </div>
             }
         >
             <Head title="Aduan Saya" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            <h3 className="text-lg font-medium">Riwayat Aduan Saya</h3>
-                            <div className="mt-4 overflow-x-auto">
+            <div className="py-6 sm:py-12">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <form onSubmit={handleSearch} className="w-full md:w-1/3 flex">
+                            <TextInput
+                                type="text"
+                                className="w-full rounded-r-none"
+                                placeholder="Cari judul aduan..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            <PrimaryButton className="rounded-l-none justify-center px-4">
+                                <FaSearch />
+                            </PrimaryButton>
+                        </form>
+                        <PrimaryButton onClick={openCreateModal} className="w-full md:hidden justify-center">
+                            <FaPlus className="mr-2" /> Buat Aduan Baru
+                        </PrimaryButton>
+                    </div>
+
+                    {complaints.data.length > 0 ? (
+                        <>
+                            <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Judul Aduan</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teknisi</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal Dibuat</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Aduan</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teknisi</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Dibuat</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {complaints.data.length === 0 && (
-                                            <tr><td colSpan="4" className="px-6 py-4 text-center text-gray-500">Belum ada aduan.</td></tr>
-                                        )}
                                         {complaints.data.map((task) => (
-                                            <tr key={task.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{task.title}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(task.status)}`}>
-                                                        {task.status}
-                                                    </span>
+                                            <tr key={task.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-bold text-gray-900">{task.title}</div>
+                                                    <div className="text-xs text-gray-500 truncate max-w-xs">{task.description || '-'}</div>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.technician_user?.name || '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(task.created_at).toLocaleDateString('id-ID')}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {getStatusBadge(task.status)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                    {task.technician_name || <span className="italic text-gray-400">Belum ada</span>}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {task.created_at}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    </div>
+
+                            <div className="md:hidden space-y-4">
+                                {complaints.data.map((task) => (
+                                    <div key={task.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                                        <div className="flex justify-between items-start mb-3 border-b pb-2">
+                                            <div>
+                                                <h3 className="font-bold text-lg text-gray-800">{task.title}</h3>
+                                                <span className="text-xs text-gray-500">{task.created_at}</span>
+                                            </div>
+                                            {getStatusBadge(task.status)}
+                                        </div>
+                                        
+                                        <p className="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded border border-gray-100">
+                                            {task.description || 'Tidak ada deskripsi detail.'}
+                                        </p>
+
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <FaUserCog className="text-blue-500" />
+                                            <span>Teknisi: </span>
+                                            <span className="font-semibold text-gray-700">{task.technician_name || 'Menunggu Penugasan'}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6">
+                                <Pagination links={complaints.links} />
+                            </div>
+                        </>
+                    ) : (
+                        <EmptyState
+                            title="Belum Ada Aduan"
+                            message={search ? `Tidak ditemukan aduan dengan kata kunci "${search}"` : "Jika internet Anda bermasalah, segera laporkan di sini."}
+                        />
+                    )}
                 </div>
             </div>
 
             <Modal show={showCreateModal} onClose={closeModal}>
                 <form onSubmit={submitComplaint} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Buat Aduan Baru
+                    <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <FaExclamationCircle className="text-red-500" /> Buat Laporan Gangguan
                     </h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Jelaskan kendala yang Anda alami. Aduan akan otomatis masuk ke antrian teknisi.
+                    <p className="mb-6 text-sm text-gray-600">
+                        Jelaskan kendala yang Anda alami secara detail agar teknisi kami dapat membawa peralatan yang tepat.
                     </p>
-                    <div className="mt-6">
-                        <InputLabel htmlFor="title" value="Judul Aduan" />
-                        <TextInput id="title" value={data.title} onChange={(e) => setData('title', e.target.value)} className="mt-1 block w-full" required />
-                        <InputError message={errors.title} className="mt-2" />
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <InputLabel htmlFor="title" value="Judul Masalah (Singkat)" />
+                            <TextInput 
+                                id="title" 
+                                value={data.title} 
+                                onChange={(e) => setData('title', e.target.value)} 
+                                className="mt-1 block w-full" 
+                                placeholder="Contoh: Internet Mati Total / Kabel Putus"
+                                required 
+                            />
+                            <InputError message={errors.title} className="mt-2" />
+                        </div>
+                        <div>
+                            <InputLabel htmlFor="description" value="Deskripsi Detail (Opsional)" />
+                            <TextArea 
+                                id="description" 
+                                value={data.description} 
+                                onChange={(e) => setData('description', e.target.value)} 
+                                className="mt-1 block w-full" 
+                                rows="4"
+                                placeholder="Ceritakan kronologi atau kondisi lampu modem..."
+                            />
+                            <InputError message={errors.description} className="mt-2" />
+                        </div>
                     </div>
-                    <div className="mt-4">
-                        <InputLabel htmlFor="description" value="Deskripsi (Opsional)" />
-                        <TextArea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full" />
-                        <InputError message={errors.description} className="mt-2" />
-                    </div>
-                    <div className="mt-6 flex justify-end">
+
+                    <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
-                        <PrimaryButton className="ml-3" disabled={processing}>
-                            Kirim Aduan
+                        <PrimaryButton disabled={processing}>
+                            Kirim Laporan
                         </PrimaryButton>
                     </div>
                 </form>

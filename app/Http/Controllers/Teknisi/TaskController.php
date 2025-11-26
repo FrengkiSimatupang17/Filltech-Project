@@ -12,26 +12,47 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tasks = Task::with('clientUser')
-            ->where('technician_user_id', Auth::id())
-            ->orderByRaw("CASE WHEN status = 'assigned' THEN 1 WHEN status = 'in_progress' THEN 2 ELSE 3 END")
-            ->orderBy('updated_at', 'desc')
-            ->get();
+        $query = Task::with('client')
+            ->where('technician_user_id', Auth::id());
 
-        return Inertia::render('Teknisi/Tasks/Index', [
-            'tasks' => $tasks->map(fn ($task) => [
+        // Filter Pencarian
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('client', function ($sq) use ($request) {
+                      $sq->where('name', 'like', '%' . $request->search . '%')
+                         ->orWhere('nomor_rumah', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+
+        // Filter Tab Status
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Sorting Prioritas: Assigned -> In Progress -> Completed
+        $tasks = $query->orderByRaw("CASE WHEN status = 'assigned' THEN 1 WHEN status = 'in_progress' THEN 2 ELSE 3 END")
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn ($task) => [
                 'id' => $task->id,
                 'title' => $task->title,
                 'description' => $task->description,
                 'type' => $task->type,
                 'status' => $task->status,
-                'client_name' => $task->clientUser?->name,
-                'client_address' => $task->clientUser?->address_detail,
-                'client_phone' => $task->clientUser?->phone_number,
-                'created_at' => $task->created_at->format('d M Y'),
-            ]),
+                'client_name' => $task->client ? $task->client->name : 'Klien Dihapus',
+                'client_address' => $task->client ? "Blok {$task->client->blok} No. {$task->client->nomor_rumah}" : '-',
+                'client_phone' => $task->client ? $task->client->phone_number : '-',
+                'created_at' => $task->created_at->translatedFormat('d M Y'),
+            ]);
+
+        return Inertia::render('Teknisi/Tasks/Index', [
+            'tasks' => $tasks,
+            'filters' => $request->only(['search', 'status']),
         ]);
     }
 
@@ -53,6 +74,6 @@ class TaskController extends Controller
 
         $task->update($taskData);
 
-        return Redirect::route('teknisi.tasks.index');
+        return Redirect::route('teknisi.tasks.index')->with('success', 'Status tugas berhasil diperbarui.');
     }
 }

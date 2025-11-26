@@ -21,16 +21,12 @@ class SubscriptionController extends Controller
 
         $existingSubscription = Subscription::where('user_id', $user->id)
             ->whereIn('status', ['active', 'pending'])
+            ->with('package')
             ->first();
 
-        $subscription = $existingSubscription 
-            ? Subscription::with('package')->find($existingSubscription->id) 
-            : null;
-
         return Inertia::render('Client/Subscribe', [
-            'packages' => $existingSubscription ? [] : Package::all(),
-            'hasSubscription' => $existingSubscription !== null,
-            'subscription' => $subscription,
+            'packages' => $existingSubscription ? [] : Package::orderBy('price', 'asc')->get(),
+            'currentSubscription' => $existingSubscription,
         ]);
     }
 
@@ -48,7 +44,7 @@ class SubscriptionController extends Controller
 
         if ($existingSubscription) {
             return Redirect::route('client.subscribe.index')
-                ->with('error', 'Anda sudah memiliki langganan.');
+                ->with('error', 'Anda sudah memiliki langganan aktif atau sedang diproses.');
         }
 
         Subscription::create([
@@ -57,6 +53,7 @@ class SubscriptionController extends Controller
             'status' => 'pending',
         ]);
 
+        // Notifikasi ke Admin
         $admins = User::where('role', 'administrator')->get();
         Notification::send($admins, new SystemAlert(
             'Permintaan Langganan Baru dari ' . $user->name,
@@ -64,6 +61,6 @@ class SubscriptionController extends Controller
             'subscription'
         ));
 
-        return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim.');
+        return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim. Mohon tunggu verifikasi admin.');
     }
 }
