@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController; // Controller baru untuk Grafik
+use App\Http\Controllers\DashboardController; // Controller Grafik Dashboard
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\NotificationController;
+// Admin Controllers
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\ClientManagementController;
 use App\Http\Controllers\Admin\TechnicianManagementController;
@@ -13,11 +14,14 @@ use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ActivityLogController;
+// Auth Controllers
 use App\Http\Controllers\Auth\SocialiteController;
+// Client Controllers
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Client\ComplaintController;
+// Teknisi Controllers
 use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController;
 use App\Http\Controllers\Teknisi\AttendanceController;
 use App\Http\Controllers\Teknisi\EquipmentLogController;
@@ -46,7 +50,8 @@ Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCa
 
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard Redirect Logic (DIGANTI SEMENTARA KE DASHBOARD BARU)
+    // Dashboard Utama (Admin dengan Grafik)
+    // Menggunakan DashboardController agar grafik muncul
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Management
@@ -72,13 +77,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('subscriptions/{subscription}/invoice', [SubscriptionManagementController::class, 'storeInstallationInvoice'])->name('subscriptions.storeInvoice');
 
         Route::get('payments', [PaymentVerificationController::class, 'index'])->name('payments.index');
-        Route::patch('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
+        Route::post('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
 
         Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index');
         Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update');
 
         // Reporting & Logs
+        // Menambahkan route export PDF sebelum index agar tidak tertimpa
+        Route::get('reports/export', [ReportController::class, 'exportPdf'])->name('reports.export');
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     });
 

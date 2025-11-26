@@ -4,6 +4,7 @@ import { useState } from 'react';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton'; // Pastikan ada
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
 
@@ -23,6 +24,12 @@ export default function ReportIndex({ auth, reports }) {
             preserveState: true,
             preserveScroll: true,
         });
+    };
+
+    const handleExport = () => {
+        // Membuka URL download di tab baru agar tidak mengganggu halaman aktif
+        const url = route('admin.reports.export', dates);
+        window.open(url, '_blank');
     };
 
     const formatRupiah = (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
@@ -68,9 +75,14 @@ export default function ReportIndex({ auth, reports }) {
                                     onChange={handleDateChange}
                                 />
                             </div>
-                            <PrimaryButton type="submit" className="w-full md:w-auto justify-center h-[42px]">
-                                Terapkan Filter
-                            </PrimaryButton>
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <PrimaryButton type="submit" className="justify-center h-[42px]">
+                                    Filter
+                                </PrimaryButton>
+                                <SecondaryButton type="button" onClick={handleExport} className="justify-center h-[42px] bg-red-50 text-red-600 hover:bg-red-100 border-red-200">
+                                    📄 Export PDF
+                                </SecondaryButton>
+                            </div>
                         </form>
                     </div>
 
@@ -90,7 +102,6 @@ export default function ReportIndex({ auth, reports }) {
                             <h3 className="font-bold text-gray-800">Riwayat Transaksi</h3>
                         </div>
                         
-                        {/* PASTIKAN CONTROLLER MENGIRIM PAGINATION AGAR .data ADA */}
                         {reports.transactions.data.length > 0 ? (
                             <>
                                 <div className="hidden md:block overflow-x-auto">
