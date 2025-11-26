@@ -13,7 +13,6 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
-        // Set Locale untuk tampilan web
         Carbon::setLocale('id');
 
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
@@ -38,7 +37,7 @@ class ReportController extends Controller
             ->through(fn ($inv) => [
                 'id' => $inv->id,
                 'invoice_number' => $inv->invoice_number,
-                'paid_at' => Carbon::parse($inv->paid_at)->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i'),
+                'paid_at' => Carbon::parse($inv->paid_at)->translatedFormat('d F Y, H:i'),
                 'amount' => $inv->amount,
             ]);
 
@@ -56,7 +55,6 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request)
     {
-        // Wajib: Set Locale Indonesia untuk PDF
         Carbon::setLocale('id');
         
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());

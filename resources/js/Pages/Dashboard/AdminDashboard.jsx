@@ -9,7 +9,9 @@ export default function AdminDashboard({ auth, stats, chart }) {
     
     const formatRupiah = (number) => {
         return new Intl.NumberFormat('id-ID', {
-            style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
         }).format(number);
     };
 
@@ -23,7 +25,6 @@ export default function AdminDashboard({ auth, stats, chart }) {
             <div className="py-8">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    {/* Welcome Banner */}
                     <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-2xl p-8 mb-8 text-white shadow-lg relative overflow-hidden">
                         <div className="relative z-10">
                             <h1 className="text-3xl font-bold mb-2">Selamat Datang, {auth.user.name}!</h1>
@@ -32,37 +33,45 @@ export default function AdminDashboard({ auth, stats, chart }) {
                         <div className="absolute right-0 top-0 h-full w-1/3 bg-white opacity-5 transform skew-x-12"></div>
                     </div>
 
-                    {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <StatCard title="Verifikasi Pembayaran" value={stats?.pending_payments || 0} icon={FaClipboardCheck} color="blue" />
-                        <StatCard title="Tugas Pending" value={stats?.pending_tasks || 0} icon={FaTasks} color="yellow" />
-                        <StatCard title="Klien Baru" value={stats?.new_clients_monthly || 0} icon={FaUserPlus} color="green" />
-                        <StatCard title="Pendapatan" value={formatRupiah(stats?.monthly_revenue || 0)} icon={FaWallet} color="purple" />
+                        <StatCard title="Verifikasi Pembayaran" value={stats.pending_payments} icon={FaClipboardCheck} color="blue" />
+                        <StatCard title="Tugas Pending" value={stats.pending_tasks} icon={FaTasks} color="yellow" />
+                        <StatCard title="Klien Baru (Bulan Ini)" value={stats.new_clients_monthly} icon={FaUserPlus} color="green" />
+                        <StatCard title="Pendapatan (Bulan Ini)" value={formatRupiah(stats.monthly_revenue)} icon={FaWallet} color="purple" />
                     </div>
 
-                    {/* Split View */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         
-                        {/* Aksi Cepat */}
                         <div className="lg:col-span-1 flex flex-col gap-6">
                             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
                                 <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Aksi Cepat</h3>
                                 <div className="space-y-4">
-                                    <Link href={route('admin.clients.create')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-lg transition-colors border border-gray-100">
+                                    <Link 
+                                        href={route('admin.clients.create')} 
+                                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-lg transition-colors group border border-gray-100"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="bg-white p-2 rounded-md shadow-sm text-blue-500"><FaUserPlus /></div>
                                             <span className="font-semibold text-sm">Tambah Klien</span>
                                         </div>
                                         <span>→</span>
                                     </Link>
-                                    <Link href={route('admin.packages.index')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-purple-50 text-gray-700 hover:text-purple-600 rounded-lg transition-colors border border-gray-100">
+
+                                    <Link 
+                                        href={route('admin.packages.index')} 
+                                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-purple-50 text-gray-700 hover:text-purple-600 rounded-lg transition-colors group border border-gray-100"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="bg-white p-2 rounded-md shadow-sm text-purple-500"><FaWifi /></div>
                                             <span className="font-semibold text-sm">Kelola Paket</span>
                                         </div>
                                         <span>→</span>
                                     </Link>
-                                    <Link href={route('admin.technicians.index')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-600 rounded-lg transition-colors border border-gray-100">
+
+                                    <Link 
+                                        href={route('admin.technicians.index')} 
+                                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-600 rounded-lg transition-colors group border border-gray-100"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="bg-white p-2 rounded-md shadow-sm text-green-500"><FaUsers /></div>
                                             <span className="font-semibold text-sm">Data Teknisi</span>
@@ -73,17 +82,18 @@ export default function AdminDashboard({ auth, stats, chart }) {
                             </div>
                         </div>
 
-                        {/* Grafik */}
                         <div className="lg:col-span-2">
                             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
                                 <div className="flex justify-between items-center mb-6">
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-800">Analitik Pendapatan</h3>
-                                        <p className="text-sm text-gray-400 mt-1">Tren pemasukan 12 bulan terakhir</p>
+                                        <p className="text-sm text-gray-400 mt-1">Tren pemasukan tahun {new Date().getFullYear()}</p>
                                     </div>
+                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                        {new Date().getFullYear()}
+                                    </span>
                                 </div>
                                 
-                                {/* CONTAINER HEIGHT WAJIB ADA */}
                                 <div className="w-full h-80">
                                     <RevenueChart data={chart} />
                                 </div>

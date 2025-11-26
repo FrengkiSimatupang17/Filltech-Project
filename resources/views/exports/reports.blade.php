@@ -68,7 +68,7 @@
                 </td>
                 <td>
                     <span class="badge {{ $tx->type === 'installation' ? 'badge-installation' : 'badge-monthly' }}">
-                        {{ ucfirst($tx->type === 'installation' ? 'Pemasangan' : 'Bulanan') }}
+                        {{ ucfirst($tx->type ?? 'Bulanan') }}
                     </span>
                 </td>
                 <td class="text-right" style="font-family: monospace; font-size: 13px;">

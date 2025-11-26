@@ -7,9 +7,12 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const RevenueChart = ({ data }) => {
-    // Debugging: Cek apakah data masuk
     if (!data || data.length === 0) {
-        return <div className="p-4 text-center text-red-500">Data Chart Kosong</div>;
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                <p className="text-gray-400 text-sm">Data grafik tidak tersedia</p>
+            </div>
+        );
     }
 
     const chartData = {
@@ -30,20 +33,27 @@ const RevenueChart = ({ data }) => {
     const options = {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+            legend: { display: false },
+        },
         scales: {
             y: {
                 beginAtZero: true,
                 grid: { borderDash: [2, 4] },
+                ticks: {
+                    font: { size: 10 },
+                    callback: (value) => 'Rp ' + (value / 1000) + 'k'
+                }
             },
             x: {
-                grid: { display: false }
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
             }
         }
     };
 
     return (
-        <div className="relative w-full h-full min-h-[300px] bg-gray-50 rounded-lg p-2">
+        <div className="relative h-full w-full">
             <Bar data={chartData} options={options} />
         </div>
     );

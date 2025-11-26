@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Subscription; // Import Model Subscription
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -17,15 +16,12 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // --- LOGIC 1: CLIENT ---
         if ($user->role === 'client') {
-            // FIX: Ambil data langganan aktif agar Dashboard tidak minta pilih paket lagi
-            $activeSubscription = Subscription::with('package')
+            $activeSubscription = \App\Models\Subscription::with('package')
                 ->where('user_id', $user->id)
                 ->where('status', 'active')
                 ->first();
 
-            // Ambil tagihan belum bayar (opsional, untuk notifikasi di dashboard)
             $unpaidInvoice = Invoice::where('user_id', $user->id)
                 ->where('status', 'unpaid')
                 ->latest()
@@ -35,17 +31,40 @@ class DashboardController extends Controller
                 'auth' => [
                     'user' => $user,
                 ],
-                'subscription' => $activeSubscription, // Data ini yang dicari Frontend
+                'subscription' => $activeSubscription,
                 'unpaid_invoice' => $unpaidInvoice,
             ]);
         }
 
-        // --- LOGIC 2: TEKNISI ---
         if ($user->role === 'teknisi') {
-            return Inertia::render('Dashboard/TeknisiDashboard');
+            $teknisiId = $user->id;
+            
+            $taskStats = [
+                'assigned' => \App\Models\Task::where('technician_user_id', $teknisiId)->where('status', 'assigned')->count(),
+                'in_progress' => \App\Models\Task::where('technician_user_id', $teknisiId)->where('status', 'in_progress')->count(),
+                'completed_today' => \App\Models\Task::where('technician_user_id', $teknisiId)
+                    ->where('status', 'completed')
+                    ->whereDate('completed_at', today())
+                    ->count(),
+            ];
+
+            $todayAttendance = \App\Models\Attendance::where('technician_user_id', $teknisiId)
+                ->whereDate('clock_in', today())
+                ->first();
+            
+            $isClockedIn = $todayAttendance && !$todayAttendance->clock_out;
+
+            return Inertia::render('Dashboard/TeknisiDashboard', [
+                'taskStats' => $taskStats,
+                'isClockedIn' => $isClockedIn,
+                'todayAttendance' => $todayAttendance ? [
+                    'clock_in' => $todayAttendance->clock_in->translatedFormat('H:i'),
+                    'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->translatedFormat('H:i') : null,
+                ] : null,
+            ]);
         }
 
-        // --- LOGIC 3: ADMINISTRATOR (Default) ---
+        // --- ADMINISTRATOR LOGIC ---
         $stats = [
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'pending_tasks' => 0, 
