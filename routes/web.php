@@ -24,21 +24,14 @@ use App\Http\Controllers\Teknisi\EquipmentLogController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Models\Package;
 
 Route::get('/', function () {
-    // Return a limited and lean payload for the homepage to avoid sending full model data
-    $packages = Package::select('id', 'name', 'price', 'speed', 'description')
-        ->orderBy('price', 'asc')
-        ->take(6)
-        ->get();
-
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
-        'packages' => $packages,
+        'packages' => App\Models\Package::orderBy('price', 'asc')->get(),
     ]);
 });
 

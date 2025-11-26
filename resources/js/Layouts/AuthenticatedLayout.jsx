@@ -135,7 +135,14 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                                         ))
                                                     )}
                                                 </div>
-                                                {/* LINK "LIHAT SEMUA" DIHAPUS - KARENA MENGGANGGU */}
+                                                <div className="border-t p-2">
+                                                    <Link 
+                                                        href={route('notifications.index')} 
+                                                        className="block text-center text-sm text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        Lihat Semua
+                                                    </Link>
+                                                </div>
                                             </Dropdown.Content>
                                         </Dropdown>
                                     </div>

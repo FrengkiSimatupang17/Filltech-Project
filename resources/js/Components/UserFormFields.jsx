@@ -110,7 +110,7 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                         onChange={(e) => setData('blok', e.target.value)}
                         placeholder="A"
                     />
-                    <InputError className="mt-2" message={errors.blok} />
+                    <InputError message={errors.blok} className="mt-2" />
                 </div>
                 <div>
                     <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
@@ -121,7 +121,7 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                         onChange={(e) => setData('nomor_rumah', e.target.value)}
                         placeholder="12B"
                     />
-                    <InputError className="mt-2" message={errors.nomor_rumah} />
+                    <InputError message={errors.nomor_rumah} className="mt-2" />
                 </div>
             </div>
         </>
