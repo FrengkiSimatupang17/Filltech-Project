@@ -17,7 +17,6 @@ class TaskController extends Controller
         $query = Task::with('client')
             ->where('technician_user_id', Auth::id());
 
-        // Filter Pencarian
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
@@ -28,12 +27,10 @@ class TaskController extends Controller
             });
         }
 
-        // Filter Tab Status
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        // Sorting Prioritas: Assigned -> In Progress -> Completed
         $tasks = $query->orderByRaw("CASE WHEN status = 'assigned' THEN 1 WHEN status = 'in_progress' THEN 2 ELSE 3 END")
             ->orderBy('updated_at', 'desc')
             ->paginate(10)

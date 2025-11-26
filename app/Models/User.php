@@ -2,29 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
         'email',
         'password',
-        'id_unik',
         'role',
+        'id_unik',
         'phone_number',
+        'google_id',
+        'google_avatar',
         'rt',
         'rw',
         'blok',
         'nomor_rumah',
-        'google_id',
-        'google_avatar',
     ];
 
     protected $hidden = [
@@ -32,12 +33,19 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
+    public function invoices(): HasMany
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
     public function subscriptions(): HasMany
@@ -45,13 +53,39 @@ class User extends Authenticatable
         return $this->hasMany(Subscription::class);
     }
 
-    public function invoices(): HasMany
+    public function clientTasks(): HasMany
     {
-        return $this->hasMany(Invoice::class);
+        return $this->hasMany(Task::class, 'client_user_id');
     }
 
-    public function payments(): HasMany
+    public function technicianTasks(): HasMany
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasMany(Task::class, 'technician_user_id');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'administrator';
+    }
+
+    public function isTeknisi(): bool
+    {
+        return $this->role === 'teknisi';
+    }
+
+    public function isClient(): bool
+    {
+        return $this->role === 'client';
+    }
+    
+    public function getAddressDetailAttribute()
+    {
+        $parts = [];
+        if ($this->blok) $parts[] = "Blok {$this->blok}";
+        if ($this->nomor_rumah) $parts[] = "No. {$this->nomor_rumah}";
+        if ($this->rt) $parts[] = "RT {$this->rt}";
+        if ($this->rw) $parts[] = "RW {$this->rw}";
+        
+        return empty($parts) ? '-' : implode(', ', $parts);
     }
 }

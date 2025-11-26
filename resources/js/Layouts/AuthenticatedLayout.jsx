@@ -73,7 +73,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 <div className="drawer-content flex flex-col min-h-screen">
                     
                     <nav className="bg-white border-b border-gray-100 sticky top-0 w-full z-30 h-16">
-                        <div className="px-4 sm:px-6 lg:px-8 h-full">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
                             <div className="flex justify-between items-center h-full">
                                 
                                 <div className="flex items-center gap-3">
@@ -105,9 +105,9 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                                 </button>
                                             </Dropdown.Trigger>
                                             
-                                            <Dropdown.Content align="right" width="60">
+                                            <Dropdown.Content align="right" width="80">
                                                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                                                    <span className="text-sm font-semibold text-gray-700">Notifikasi ({unreadCount})</span>
+                                                    <span className="text-sm font-semibold text-gray-700">Notifikasi ({unreadCount} Belum Dibaca)</span>
                                                 </div>
                                                 <div className="max-h-64 overflow-y-auto">
                                                     {notifications.length === 0 ? (
@@ -116,32 +116,26 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                                         </div>
                                                     ) : (
                                                         notifications.map((notif) => (
-                                                            <button
-                                                                key={notif.id}
-                                                                onClick={() => handleNotificationClick(notif.id, notif.data.url)}
-                                                                className="w-full text-left px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 border-b border-gray-100 transition-colors duration-150 flex items-start gap-3"
-                                                            >
-                                                                <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
-                                                                    !notif.read_at ? 'bg-blue-500' : 'bg-gray-300'
-                                                                }`}></div>
-                                                                <div>
-                                                                    <p className="font-medium text-gray-800">{notif.data.message}</p>
-                                                                    <p className="text-xs text-gray-500 mt-1">
-                                                                        {new Date(notif.created_at).toLocaleString('id-ID')}
-                                                                    </p>
-                                                                </div>
-                                                            </button>
+                                                            <div key={notif.id}>
+                                                                <button 
+                                                                    onClick={() => handleNotificationClick(notif.id, notif.data.url)}
+                                                                    className={`block w-full text-left px-4 py-3 text-sm leading-5 text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${!notif.read_at ? 'bg-blue-50/70' : 'bg-white'}`}
+                                                                >
+                                                                    <div className="flex items-start gap-2">
+                                                                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read_at ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+                                                                        <div>
+                                                                            <p className="font-medium text-gray-800">{notif.data.message}</p>
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                                {new Date(notif.created_at).toLocaleString('id-ID')}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+                                                            </div>
                                                         ))
                                                     )}
                                                 </div>
-                                                <div className="border-t p-2">
-                                                    <Link 
-                                                        href={route('notifications.index')} 
-                                                        className="block text-center text-sm text-blue-600 hover:text-blue-700"
-                                                    >
-                                                        Lihat Semua
-                                                    </Link>
-                                                </div>
+                                                {/* LINK "LIHAT SEMUA" DIHAPUS - KARENA MENGGANGGU */}
                                             </Dropdown.Content>
                                         </Dropdown>
                                     </div>

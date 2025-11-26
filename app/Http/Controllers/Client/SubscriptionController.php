@@ -53,7 +53,6 @@ class SubscriptionController extends Controller
             'status' => 'pending',
         ]);
 
-        // Notifikasi ke Admin
         $admins = User::where('role', 'administrator')->get();
         Notification::send($admins, new SystemAlert(
             'Permintaan Langganan Baru dari ' . $user->name,

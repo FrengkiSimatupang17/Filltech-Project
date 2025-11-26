@@ -20,7 +20,6 @@ class EquipmentLogController extends Controller
 
         $availableEquipmentQuery = Equipment::where('status', 'available');
 
-        // Search for Available equipment (optional)
         if ($search) {
             $availableEquipmentQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')

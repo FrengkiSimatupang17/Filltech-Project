@@ -21,8 +21,10 @@ class ComplaintController extends Controller
             ->where('type', 'repair');
 
         if ($request->has('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%')
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
                   ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
         }
 
         $complaints = $query->orderBy('created_at', 'desc')
