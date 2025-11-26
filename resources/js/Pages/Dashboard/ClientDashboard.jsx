@@ -7,12 +7,11 @@ import {
     WifiIcon,
     ArrowPathIcon,
     ChatBubbleLeftIcon,
-    InformationCircleIcon,
     UserCircleIcon,
     BanknotesIcon
 } from '@heroicons/react/24/outline';
 
-const ServiceDetails = ({ details, auth }) => {
+const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
     
     const getStatusBadge = (status) => {
         switch (status) {
@@ -28,6 +27,9 @@ const ServiceDetails = ({ details, auth }) => {
         return `Rp ${parseFloat(amount).toLocaleString('id-ID')}`;
     };
 
+    const hasUnpaidInvoice = !!unpaidInvoice;
+    const isOverdue = hasUnpaidInvoice && new Date(unpaidInvoice.due_date) < new Date();
+    
     return (
         <div className="space-y-4 sm:space-y-6">
             <div className="card w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white shadow-xl overflow-hidden relative border border-white/10">
@@ -39,22 +41,23 @@ const ServiceDetails = ({ details, auth }) => {
                             </div>
                             <div>
                                 <h3 className="text-blue-200 text-xs font-bold uppercase tracking-wider">Paket Aktif</h3>
-                                <p className="text-2xl font-bold">{details.package_name}</p>
+                                {/* Access data directly from subscription object */}
+                                <p className="text-2xl font-bold">{subscription.package.name}</p>
                             </div>
                         </div>
-                        <span className={getStatusBadge(details.status)}>
-                            {details.status.toUpperCase().replace('_', ' ')}
+                        <span className={getStatusBadge(subscription.status)}>
+                            {subscription.status.toUpperCase().replace('_', ' ')}
                         </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-left">
                         <div>
                             <div className="text-blue-200 text-xs mb-1">Speed</div>
-                            <div className="text-lg font-bold text-yellow-300">{details.package_speed}</div>
+                            <div className="text-lg font-bold text-yellow-300">{subscription.package.speed || '-'}</div>
                         </div>
                         <div>
-                            <div className="text-blue-200 text-xs mb-1">Tagihan</div>
-                            <div className="text-lg font-bold">{formatRupiah(details.monthly_price)}</div>
+                            <div className="text-blue-200 text-xs mb-1">Tagihan Bulanan</div>
+                            <div className="text-lg font-bold">{formatRupiah(subscription.package.price)}</div>
                         </div>
                         <div className="col-span-2 sm:col-span-1 pt-2 sm:pt-0 border-t border-white/10 sm:border-none">
                             <div className="text-blue-200 text-xs mb-1">ID Pelanggan</div>
@@ -74,29 +77,29 @@ const ServiceDetails = ({ details, auth }) => {
                         
                         <div className="flex flex-col sm:flex-row gap-4 mb-6">
                             <div className="flex-1 p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-3">
-                                <ClockIcon className="w-8 h-8 text-orange-500"/>
+                                <ClockIcon className={`w-8 h-8 ${isOverdue ? 'text-red-500' : 'text-orange-500'}`}/>
                                 <div>
                                     <div className="text-xs text-gray-500">Jatuh Tempo</div>
                                     <div className="font-bold text-gray-800 text-sm">
-                                        {details.next_invoice_due === 'N/A' ? '-' : details.next_invoice_due}
+                                        {hasUnpaidInvoice ? new Date(unpaidInvoice.due_date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : 'N/A'}
                                     </div>
                                 </div>
                             </div>
                             
                             <div className="flex-1 p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-3">
-                                <ArrowPathIcon className="w-8 h-8 text-blue-600"/>
+                                <BanknotesIcon className={`w-8 h-8 ${hasUnpaidInvoice ? 'text-red-500' : 'text-green-600'}`}/>
                                 <div>
-                                    <div className="text-xs text-gray-500">Status</div>
-                                    <div className={`font-bold text-sm ${details.next_invoice_amount > 0 ? 'text-blue-600' : 'text-green-600'}`}>
-                                        {details.next_invoice_amount > 0 ? 'BELUM BAYAR' : 'LUNAS'}
+                                    <div className="text-xs text-gray-500">Jumlah Tagihan</div>
+                                    <div className={`font-bold text-sm ${hasUnpaidInvoice ? 'text-red-600' : 'text-green-600'}`}>
+                                        {hasUnpaidInvoice ? formatRupiah(unpaidInvoice.amount) : 'Rp 0'}
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        {details.next_invoice_amount > 0 ? (
+                        {hasUnpaidInvoice ? (
                             <Link href={route('client.invoices.index')} className="btn btn-primary btn-block sm:btn-wide text-white">
-                                <BanknotesIcon className="w-4 h-4"/> Bayar Sekarang
+                                <CreditCardIcon className="w-4 h-4"/> Bayar Sekarang
                             </Link>
                         ) : (
                             <button className="btn btn-disabled btn-block sm:btn-wide btn-ghost border border-gray-200">Tidak Ada Tagihan</button>
@@ -122,13 +125,17 @@ const ServiceDetails = ({ details, auth }) => {
     );
 };
 
-export default function ClientDashboard({ auth, hasSubscription, subscriptionDetails }) {
+export default function ClientDashboard({ auth, subscription, unpaid_invoice }) {
+    
+    // Logic check now relies solely on the 'subscription' object being non-null
+    const isServiceActive = !!subscription;
+
     return (
         <AuthenticatedLayout user={auth.user}>
             <Head title="Dashboard" />
 
             <div className="py-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-                {!hasSubscription ? (
+                {!isServiceActive ? (
                     <div className="alert alert-warning shadow-lg mb-6 border-l-4 border-yellow-600 bg-yellow-50 flex flex-col sm:flex-row gap-4">
                         <div className="flex items-start gap-3">
                             <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 flex-shrink-0" />
@@ -142,7 +149,7 @@ export default function ClientDashboard({ auth, hasSubscription, subscriptionDet
                         </Link>
                     </div>
                 ) : (
-                    <ServiceDetails details={subscriptionDetails} auth={auth} />
+                    <ServiceDetails subscription={subscription} unpaidInvoice={unpaid_invoice} auth={auth} />
                 )}
             </div>
         </AuthenticatedLayout>

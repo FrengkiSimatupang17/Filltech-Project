@@ -1,18 +1,21 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
-import UserFormFields from '@/Components/UserFormFields';
+import TextInput from '@/Components/TextInput';
+import UserFormFields from '@/Components/UserFormFields'; // Pastikan path ini benar
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
+import { FaSearch, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
-export default function Index({ auth, users }) {
+export default function ClientIndex({ auth, users, filters }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(null);
+    const [search, setSearch] = useState(filters.search || '');
 
     const { data, setData, post, patch, delete: destroy, processing, errors, reset } = useForm({
         id: '',
@@ -28,6 +31,14 @@ export default function Index({ auth, users }) {
         password: '',
         password_confirmation: '',
     });
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        router.get(route('admin.clients.index'), { search }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
     const openCreateModal = () => {
         reset();
@@ -89,89 +100,120 @@ export default function Index({ auth, users }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">Manajemen Klien</h2>
-                    <PrimaryButton onClick={openCreateModal}>Tambah Klien Baru</PrimaryButton>
-                </div>
-            }
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Manajemen Klien</h2>}
         >
             <Head title="Manajemen Klien" />
 
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <form onSubmit={handleSearch} className="w-full md:w-1/3 flex">
+                            <TextInput
+                                type="text"
+                                className="w-full rounded-r-none"
+                                placeholder="Cari nama, email, atau ID..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            <PrimaryButton className="rounded-l-none justify-center">
+                                <FaSearch />
+                            </PrimaryButton>
+                        </form>
+                        <PrimaryButton onClick={openCreateModal} className="w-full md:w-auto justify-center">
+                            <FaPlus className="mr-2" /> Tambah Klien
+                        </PrimaryButton>
+                    </div>
+
                     {users.data.length > 0 ? (
                         <>
-                            <div className="hidden md:block card bg-base-100 shadow-xl">
-                                <div className="card-body p-0">
-                                    <table className="table table-zebra w-full">
-                                        <thead className="bg-base-200 text-base-content">
-                                            <tr>
-                                                <th className="p-4 rounded-tl-xl">Nama</th>
-                                                <th className="p-4">Email</th>
-                                                <th className="p-4">ID Unik</th>
-                                                <th className="p-4 text-right rounded-tr-xl">Aksi</th>
+                            <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Unik</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telepon</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {users.data.map((user) => (
+                                            <tr key={user.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-600">{user.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.id_unik ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {user.id_unik || 'Pending'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                    {user.phone_number || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button onClick={() => openEditModal(user)} className="text-blue-600 hover:text-blue-900 mr-4">
+                                                        <FaEdit size={18} />
+                                                    </button>
+                                                    <button onClick={() => openDeleteModal(user)} className="text-red-600 hover:text-red-900">
+                                                        <FaTrash size={18} />
+                                                    </button>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {users.data.map((user) => (
-                                                <tr key={user.id} className="hover">
-                                                    <td className="font-bold">{user.name}</td>
-                                                    <td>{user.email}</td>
-                                                    <td>
-                                                        <span className={user.id_unik ? 'badge badge-success text-white' : 'badge badge-warning'}>
-                                                            {user.id_unik || 'BELUM LENGKAP'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="text-right">
-                                                        <button onClick={() => openEditModal(user)} className="btn btn-sm btn-ghost text-primary">Edit</button>
-                                                        <button onClick={() => openDeleteModal(user)} className="btn btn-sm btn-ghost text-error">Delete</button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <div className="md:hidden space-y-4 px-4 sm:px-0">
+                            <div className="md:hidden space-y-4">
                                 {users.data.map((user) => (
-                                    <div key={user.id} className="card bg-base-100 shadow-md border border-base-200">
-                                        <div className="card-body p-5">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <h3 className="font-bold text-lg text-gray-800">{user.name}</h3>
-                                                    <p className="text-xs text-gray-500">{user.email}</p>
-                                                </div>
-                                                <span className={user.id_unik ? 'badge badge-sm badge-success text-white' : 'badge badge-sm badge-warning'}>
-                                                    {user.id_unik ? 'LENGKAP' : 'PENDING'}
-                                                </span>
+                                    <div key={user.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="font-bold text-lg text-gray-800">{user.name}</h3>
+                                                <p className="text-xs text-gray-500">{user.email}</p>
                                             </div>
-                                            
-                                            <div className="text-sm text-gray-600 mt-2 border-t border-base-200 pt-2">
-                                                <span className="text-gray-400 text-xs uppercase font-bold">ID Unik:</span>
-                                                <div className="font-mono text-base">{user.id_unik || '-'}</div>
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.id_unik ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {user.id_unik || 'Pending'}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2 grid grid-cols-2 gap-2">
+                                            <div>
+                                                <span className="text-xs text-gray-400 block">Telepon</span>
+                                                {user.phone_number || '-'}
                                             </div>
+                                            <div>
+                                                <span className="text-xs text-gray-400 block">Alamat</span>
+                                                {user.blok ? `Blok ${user.blok} No.${user.nomor_rumah}` : '-'}
+                                            </div>
+                                        </div>
 
-                                            <div className="card-actions justify-end mt-4 pt-2 border-t border-base-200">
-                                                <button onClick={() => openEditModal(user)} className="btn btn-sm btn-outline btn-primary flex-1">Edit</button>
-                                                <button onClick={() => openDeleteModal(user)} className="btn btn-sm btn-outline btn-error flex-1">Hapus</button>
-                                            </div>
+                                        <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-gray-100">
+                                            <SecondaryButton onClick={() => openEditModal(user)} className="text-xs h-8">
+                                                Edit
+                                            </SecondaryButton>
+                                            <DangerButton onClick={() => openDeleteModal(user)} className="text-xs h-8">
+                                                Hapus
+                                            </DangerButton>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <Pagination links={users.links} />
+                            <div className="mt-6">
+                                <Pagination links={users.links} />
+                            </div>
                         </>
                     ) : (
                         <EmptyState
-                            title="Belum Ada Klien"
-                            message="Tambahkan klien baru untuk memulai."
-                        >
-                            <PrimaryButton onClick={openCreateModal}>Tambah Klien Baru</PrimaryButton>
-                        </EmptyState>
+                            title="Data Tidak Ditemukan"
+                            message={search ? `Tidak ada klien dengan kata kunci "${search}"` : "Belum ada data klien."}
+                        />
                     )}
                 </div>
             </div>
@@ -193,7 +235,7 @@ export default function Index({ auth, users }) {
                     <UserFormFields data={data} setData={setData} errors={errors} isCreate={false} roleContext="client" />
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
-                        <PrimaryButton disabled={processing}>Simpan Perubahan</PrimaryButton>
+                        <PrimaryButton disabled={processing}>Simpan</PrimaryButton>
                     </div>
                 </form>
             </Modal>

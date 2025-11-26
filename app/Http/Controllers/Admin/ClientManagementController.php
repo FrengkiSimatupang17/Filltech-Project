@@ -13,11 +13,21 @@ use Inertia\Inertia;
 
 class ClientManagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::where('role', 'client')
-            ->orderBy('name')
+        $query = User::where('role', 'client');
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('id_unik', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $users = $query->orderBy('name')
             ->paginate(10)
+            ->withQueryString()
             ->through(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -33,6 +43,7 @@ class ClientManagementController extends Controller
 
         return Inertia::render('Admin/Clients/Index', [
             'users' => $users,
+            'filters' => $request->only(['search']),
         ]);
     }
 
