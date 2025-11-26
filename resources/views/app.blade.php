@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="filltech">
     <head>
-        <meta charset="utf-g">
+        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Filltech — Internet Fiber Optic di Batam. Stabil, terjangkau, dan didukung teknisi profesional 24/7.">
+        <meta name="theme-color" content="#2563eb">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
