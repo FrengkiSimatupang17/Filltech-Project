@@ -4,43 +4,50 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
+    /**
+     * Kolom yang boleh diisi (Mass Assignment)
+     */
     protected $fillable = [
-        'client_user_id',
-        'technician_user_id',
-        'assigned_by_admin_id',
+        'client_user_id',      // ID User Klien
+        'technician_user_id',  // ID User Teknisi (bisa null)
+        'assigned_by_admin_id',// ID Admin pembuat tugas
         'title',
         'description',
-        'type',
-        'status',
-        'completed_at',
+        'type',                // installation / repair
+        'status',              // pending, assigned, in_progress, completed, cancelled
+        'priority',            // low, medium, high
+        'completed_at'
     ];
 
-    protected $casts = [
-        'completed_at' => 'datetime',
-    ];
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['status', 'technician_user_id'])
-            ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $eventName) => "Tugas {$this->title} telah {$eventName}");
-    }
-
-    public function clientUser()
+    /**
+     * Relasi ke Klien (User)
+     * Foreign Key: client_user_id
+     */
+    public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
     }
 
-    public function technicianUser()
+    /**
+     * Relasi ke Teknisi (User)
+     * Foreign Key: technician_user_id
+     */
+    public function technician(): BelongsTo
     {
         return $this->belongsTo(User::class, 'technician_user_id');
+    }
+
+    /**
+     * Relasi ke Admin yang menugaskan (Opsional)
+     */
+    public function assignor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_admin_id');
     }
 }

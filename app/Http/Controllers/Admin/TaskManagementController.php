@@ -11,47 +11,66 @@ use Inertia\Inertia;
 
 class TaskManagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tasks = Task::with(['clientUser', 'technicianUser'])
-            ->orderByRaw("CASE WHEN status = 'pending' THEN 1 WHEN status = 'assigned' THEN 2 ELSE 3 END")
-            ->orderBy('created_at', 'desc')
+        $query = Task::with(['client', 'technician']);
+
+        // Filter Status (Pending, In Progress, Completed)
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Search by Title or Client Name
+        if ($request->has('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('client', function($sq) use ($request) {
+                      $sq->where('name', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+
+        $tasks = $query->latest()
             ->paginate(10)
+            ->withQueryString()
             ->through(fn ($task) => [
                 'id' => $task->id,
                 'title' => $task->title,
-                'description' => $task->description,
-                'type' => $task->type,
+                'type' => $task->type, // installation / repair
                 'status' => $task->status,
-                'client_name' => $task->clientUser?->name,
-                'technician_name' => $task->technicianUser?->name,
-                'created_at' => $task->created_at->format('d M Y'),
+                'client_name' => $task->client ? $task->client->name : 'Unknown Client',
+                'technician_name' => $task->technician ? $task->technician->name : null,
+                'created_at' => $task->created_at->translatedFormat('d M Y'),
             ]);
 
-        $teknisi = User::where('role', 'teknisi')->orderBy('name')->get(['id', 'name']);
+        // Ambil daftar teknisi untuk dropdown di modal assignment
+        $technicians = User::where('role', 'teknisi')
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return Inertia::render('Admin/Tasks/Index', [
             'tasks' => $tasks,
-            'teknisi' => $teknisi,
+            'teknisi' => $technicians,
+            'filters' => $request->only(['search', 'status']),
         ]);
     }
 
     public function update(Request $request, Task $task)
     {
-        $request->validate([
-            'technician_user_id' => 'required|exists:users,id',
-        ]);
+        // Fitur Assign Teknisi
+        if ($request->has('technician_user_id')) {
+            $request->validate([
+                'technician_user_id' => 'required|exists:users,id',
+            ]);
 
-        $teknisi = User::find($request->technician_user_id);
-        if ($teknisi->role !== 'teknisi') {
-            return Redirect::back()->with('error', 'User yang dipilih bukan teknisi.');
+            $task->update([
+                'technician_user_id' => $request->technician_user_id,
+                'status' => 'assigned', // Otomatis ubah status jadi assigned
+            ]);
+
+            return Redirect::back()->with('success', 'Tugas berhasil ditugaskan ke teknisi.');
         }
 
-        $task->update([
-            'technician_user_id' => $request->technician_user_id,
-            'status' => 'assigned',
-        ]);
-
-        return Redirect::route('admin.tasks.index')->with('success', 'Tugas berhasil dialokasikan.');
+        return Redirect::back();
     }
 }
