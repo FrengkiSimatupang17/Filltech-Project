@@ -14,10 +14,12 @@ export default forwardRef(function TextInput({ type = 'text', className = '', is
             {...props}
             type={type}
             className={
-                'border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm min-h-[44px] sm:min-h-[38px] text-base sm:text-sm ' +
+                // Tambahkan !bg-white dan !text-gray-900 untuk memaksa tampilan
+                'border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm min-h-[44px] sm:min-h-[38px] text-base sm:text-sm !bg-white !text-gray-900 placeholder-gray-400 ' +
                 className
             }
             ref={input}
+            style={{ backgroundColor: 'white', color: '#111827' }} // Inline style sebagai fallback terakhir
         />
     );
 });

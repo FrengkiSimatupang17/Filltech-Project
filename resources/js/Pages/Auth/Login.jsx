@@ -7,23 +7,6 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-function GoogleButton() {
-    return (
-        <a
-            href={route('socialite.google.redirect')}
-            className="btn btn-outline w-full normal-case gap-2 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 bg-white border-gray-300 mt-4"
-        >
-            <svg className="w-5 h-5" viewBox="0 0 48 48">
-                <path fill="#4285F4" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20c0-1.341-0.138-2.65-0.389-3.917Z"></path>
-                <path fill="#34A853" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691Z"></path>
-                <path fill="#FBBC05" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.596-11.303-8.342l-6.571,4.819C9.656,39.663,16.318,44,24,44Z"></path>
-                <path fill="#E94235" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.601,36.626,42.502,32.074,43.611,20.083Z"></path>
-            </svg>
-            Lanjutkan dengan Google
-        </a>
-    );
-}
-
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -45,13 +28,13 @@ export default function Login({ status, canResetPassword }) {
     return (
         <GuestLayout>
             <Head title="Log in" />
-            
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Selamat Datang Kembali</h2>
-                <p className="text-gray-500 text-sm mt-1">Silakan masuk ke akun Anda</p>
-            </div>
 
-            {status && <div className="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 rounded-md">{status}</div>}
+            {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
+
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Selamat Datang Kembali</h2>
+                <p className="text-sm text-gray-600">Silakan masuk ke akun Anda</p>
+            </div>
 
             <form onSubmit={submit}>
                 <div>
@@ -65,6 +48,7 @@ export default function Login({ status, canResetPassword }) {
                         autoComplete="username"
                         isFocused={true}
                         onChange={(e) => setData('email', e.target.value)}
+                        placeholder="nama@email.com"
                     />
                     <InputError message={errors.email} className="mt-2" />
                 </div>
@@ -79,24 +63,25 @@ export default function Login({ status, canResetPassword }) {
                         className="mt-1 block w-full"
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
+                        placeholder="••••••••"
                     />
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="flex items-center justify-between mt-4">
+                <div className="block mt-4 flex justify-between items-center">
                     <label className="flex items-center">
                         <Checkbox
                             name="remember"
                             checked={data.remember}
                             onChange={(e) => setData('remember', e.target.checked)}
                         />
-                        <span className="ms-2 text-sm text-gray-600">Ingat saya</span>
+                        <span className="ml-2 text-sm text-gray-600">Ingat saya</span>
                     </label>
                     
                     {canResetPassword && (
                         <Link
                             href={route('password.request')}
-                            className="underline text-sm text-blue-600 hover:text-blue-800 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="underline text-sm text-blue-600 hover:text-blue-800 rounded-md focus:outline-none"
                         >
                             Lupa password?
                         </Link>
@@ -104,22 +89,45 @@ export default function Login({ status, canResetPassword }) {
                 </div>
 
                 <div className="mt-6">
-                    <PrimaryButton className="w-full justify-center btn-lg" disabled={processing}>
-                        Masuk Sekarang
+                    <PrimaryButton className="w-full justify-center h-12 text-base" disabled={processing}>
+                        MASUK SEKARANG
                     </PrimaryButton>
                 </div>
-            </form>
 
-            <div className="divider my-6 text-gray-400 text-sm">ATAU</div>
-            
-            <GoogleButton />
-            
-            <div className="mt-6 text-center text-sm text-gray-600">
-                Belum punya akun?{' '}
-                <Link href={route('register')} className="text-blue-600 font-bold hover:underline">
-                    Daftar disini
-                </Link>
-            </div>
+                <div className="mt-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500 uppercase">Atau</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <a
+                            href={route('socialite.google.redirect')}
+                            className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors h-12 items-center gap-3"
+                        >
+                            {/* Logo Google Berwarna Asli */}
+                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                            </svg>
+                            Lanjutkan dengan Google
+                        </a>
+                    </div>
+                </div>
+
+                <div className="mt-6 text-center text-sm text-gray-600">
+                    Belum punya akun? 
+                    <Link href={route('register')} className="font-bold text-blue-600 hover:text-blue-800 ml-1">
+                        Daftar disini
+                    </Link>
+                </div>
+            </form>
         </GuestLayout>
     );
 }

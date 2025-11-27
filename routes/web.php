@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\ClientManagementController;
@@ -50,9 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
-    // --- ADMIN ROUTES ---
     Route::middleware(['can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
-        
         Route::resource('packages', PackageController::class)->except(['show']);
         Route::resource('clients', ClientManagementController::class)->except(['show']);
         Route::resource('technicians', TechnicianManagementController::class)->except(['show', 'create', 'edit']);
@@ -73,31 +70,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     });
 
-    // --- CLIENT ROUTES ---
     Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
-        
         Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
         Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
-        
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
-
         Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index');
         Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
     });
 
-    // --- TEKNISI ROUTES ---
     Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
         
-        Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
-        Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+        Route::middleware(['clock_in'])->group(function () {
+            Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
+            Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+            
+            Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
+            Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
+            Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
+        });
 
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-
-        Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
-        Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
-        Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
     });
 });
 
