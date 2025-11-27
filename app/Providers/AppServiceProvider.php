@@ -8,20 +8,13 @@ use App\Channels\WhatsAppChannel;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
-    public function boot(): void // <-- PERBAIKAN ADA DI SINI
+    public function boot(): void
     {
-        // Kode ini sekarang akan berfungsi karena 'use' di atas
         Notification::extend('whatsapp', function ($app) {
             return new WhatsAppChannel();
         });

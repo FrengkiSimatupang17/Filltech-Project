@@ -11,7 +11,7 @@ export default function PaymentIndex({ auth, payments }) {
     const [viewProofModal, setViewProofModal] = useState(false);
     const [selectedProof, setSelectedProof] = useState(null);
     
-    const { data, setData, post, processing, reset } = useForm({
+    const { post, processing, reset } = useForm({
         action: '',
     });
 
@@ -50,77 +50,75 @@ export default function PaymentIndex({ auth, payments }) {
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 bg-white border-b border-gray-200">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User / Invoice</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {payments.data.length > 0 ? (
-                                        payments.data.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-gray-900">{payment.user_name}</div>
-                                                    <div className="text-sm text-gray-500">{payment.invoice_number}</div>
-                                                    <div className="text-xs text-gray-400 capitalize">{payment.invoice_type}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                                                    {formatRupiah(payment.amount)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {payment.payment_proof_url ? (
-                                                        <button 
-                                                            onClick={() => openProofModal(payment.payment_proof_url)}
-                                                            className="text-blue-600 hover:text-blue-900 text-sm underline"
+                    <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User / Invoice</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {payments.data.length > 0 ? (
+                                    payments.data.map((payment) => (
+                                        <tr key={payment.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium text-gray-900">{payment.user_name}</div>
+                                                <div className="text-sm text-gray-500">{payment.invoice_number}</div>
+                                                <div className="text-xs text-gray-400 capitalize">{payment.invoice_type}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                                                {formatRupiah(payment.amount)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {payment.payment_proof_url ? (
+                                                    <button 
+                                                        onClick={() => openProofModal(payment.payment_proof_url)}
+                                                        className="text-blue-600 hover:text-blue-900 text-sm underline"
+                                                    >
+                                                        Lihat Bukti
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-400 text-sm">Tidak ada</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {getStatusBadge(payment.status)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                {payment.status === 'pending' && (
+                                                    <>
+                                                        <PrimaryButton 
+                                                            className="bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-900"
+                                                            onClick={() => handleAction(payment.id, 'approve')}
+                                                            disabled={processing}
                                                         >
-                                                            Lihat Bukti
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-gray-400 text-sm">Tidak ada</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {getStatusBadge(payment.status)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                                    {payment.status === 'pending' && (
-                                                        <>
-                                                            <PrimaryButton 
-                                                                className="bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-900"
-                                                                onClick={() => handleAction(payment.id, 'approve')}
-                                                                disabled={processing}
-                                                            >
-                                                                ✓
-                                                            </PrimaryButton>
-                                                            <DangerButton 
-                                                                onClick={() => handleAction(payment.id, 'reject')}
-                                                                disabled={processing}
-                                                            >
-                                                                ✕
-                                                            </DangerButton>
-                                                        </>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" className="px-6 py-4 text-center text-gray-500">Belum ada data pembayaran.</td>
+                                                            ✓
+                                                        </PrimaryButton>
+                                                        <DangerButton 
+                                                            onClick={() => handleAction(payment.id, 'reject')}
+                                                            disabled={processing}
+                                                        >
+                                                            ✕
+                                                        </DangerButton>
+                                                    </>
+                                                )}
+                                            </td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">Belum ada data pembayaran.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div className="md:hidden space-y-4 px-4 sm:px-0">
+                    <div className="md:hidden space-y-4">
                         {payments.data.length > 0 ? (
                             payments.data.map((payment) => (
                                 <div key={payment.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">

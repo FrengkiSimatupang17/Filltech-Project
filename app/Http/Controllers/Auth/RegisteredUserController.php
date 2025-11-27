@@ -39,6 +39,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('profile.complete'); // <-- PERUBAHAN DI SINI
+        return redirect()->route('profile.complete');
     }
 }

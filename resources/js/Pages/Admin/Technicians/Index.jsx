@@ -8,11 +8,10 @@ import DangerButton from '@/Components/DangerButton';
 import TextInput from '@/Components/TextInput';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
+import { FaSearch, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
-import { FaSearch, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
-// START OF TECHNICIAN FORM FIELDS (As in previous block)
 const TechnicianFormFields = ({ data, setData, errors, isCreate }) => {
     return (
         <div className="space-y-4">
@@ -80,7 +79,7 @@ const TechnicianFormFields = ({ data, setData, errors, isCreate }) => {
         </div>
     );
 };
-// END OF TECHNICIAN FORM FIELDS
+
 
 export default function TechnicianIndex({ auth, users, filters }) {
     const [showCreateModal, setShowCreateModal] = useState(false);

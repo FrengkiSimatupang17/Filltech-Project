@@ -11,10 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -22,7 +18,7 @@ class PaymentController extends Controller
     {
         $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
-            'payment_proof' => 'required|file|mimes:jpeg,png,jpg,pdf|max:4096',
+            'payment_proof' => 'required|file|image|max:2048',
         ]);
 
         $invoice = Invoice::findOrFail($request->invoice_id);
@@ -36,34 +32,23 @@ class PaymentController extends Controller
                 ->with('error', 'Pembayaran untuk tagihan ini sudah diunggah.');
         }
 
-        try {
-           
-            $file = $request->file('payment_proof');
-            $filename = Str::random(40) . '.' . $file->extension();
- 
-            $path = $file->storeAs('payment-proofs', $filename, 'public');
+        $path = $request->file('payment_proof')->store('payment-proofs', 'public');
 
-            DB::transaction(function () use ($invoice, $path) {
-                Payment::create([
-                    'invoice_id' => $invoice->id,
-                    'user_id' => Auth::id(),
-                    'amount' => $invoice->amount,
-                    'payment_proof_path' => $path,
-                    'status' => 'pending',
-                ]);
+        Payment::create([
+            'invoice_id' => $invoice->id,
+            'user_id' => Auth::id(),
+            'amount' => $invoice->amount,
+            'payment_proof_path' => $path,
+            'status' => 'pending',
+        ]);
 
-                $admins = User::admins()->get();
-                Notification::send($admins, new SystemAlert(
-                    'Verifikasi Pembayaran Baru: Rp ' . number_format($invoice->amount, 0, ',', '.'),
-                    route('admin.payments.index'),
-                    'payment'
-                ));
-            });
+        $admins = User::where('role', 'administrator')->get();
+        Notification::send($admins, new SystemAlert(
+            'Verifikasi Pembayaran Baru: Rp ' . number_format($invoice->amount, 0, ',', '.'),
+            route('admin.payments.index'),
+            'payment'
+        ));
 
-            return Redirect::route('client.invoices.index')->with('success', 'Bukti pembayaran berhasil diunggah.');
-        } catch (\Exception $e) {
-            Log::error('Payment upload failed: '.$e->getMessage(), ['invoice_id' => $request->invoice_id, 'user_id' => Auth::id()]);
-            return Redirect::route('client.invoices.index')->with('error', 'Terjadi kesalahan saat mengunggah bukti pembayaran. Silakan coba lagi.');
-        }
+        return Redirect::route('client.invoices.index')->with('success', 'Bukti pembayaran berhasil diunggah.');
     }
 }

@@ -34,28 +34,28 @@ class PackageController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'speed' => 'nullable|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        Package::create($validated);
+        Package::create($request->all());
 
         return Redirect::route('admin.packages.index')->with('success', 'Paket berhasil ditambahkan!');
     }
 
     public function update(Request $request, Package $package)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'speed' => 'nullable|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        $package->update($validated);
+        $package->update($request->all());
 
         return Redirect::route('admin.packages.index')->with('success', 'Paket berhasil diperbarui.');
     }

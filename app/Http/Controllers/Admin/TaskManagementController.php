@@ -15,12 +15,10 @@ class TaskManagementController extends Controller
     {
         $query = Task::with(['client', 'technician']);
 
-        // Filter Status (Pending, In Progress, Completed)
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        // Search by Title or Client Name
         if ($request->has('search')) {
             $query->where(function($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
@@ -36,14 +34,13 @@ class TaskManagementController extends Controller
             ->through(fn ($task) => [
                 'id' => $task->id,
                 'title' => $task->title,
-                'type' => $task->type, // installation / repair
+                'type' => $task->type,
                 'status' => $task->status,
                 'client_name' => $task->client ? $task->client->name : 'Unknown Client',
                 'technician_name' => $task->technician ? $task->technician->name : null,
                 'created_at' => $task->created_at->translatedFormat('d M Y'),
             ]);
 
-        // Ambil daftar teknisi untuk dropdown di modal assignment
         $technicians = User::where('role', 'teknisi')
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -57,7 +54,6 @@ class TaskManagementController extends Controller
 
     public function update(Request $request, Task $task)
     {
-        // Fitur Assign Teknisi
         if ($request->has('technician_user_id')) {
             $request->validate([
                 'technician_user_id' => 'required|exists:users,id',
@@ -65,7 +61,7 @@ class TaskManagementController extends Controller
 
             $task->update([
                 'technician_user_id' => $request->technician_user_id,
-                'status' => 'assigned', // Otomatis ubah status jadi assigned
+                'status' => 'assigned',
             ]);
 
             return Redirect::back()->with('success', 'Tugas berhasil ditugaskan ke teknisi.');

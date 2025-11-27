@@ -10,7 +10,7 @@ import SelectInput from '@/Components/SelectInput';
 import TextInput from '@/Components/TextInput';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
-import { FaSearch, FaFilter } from 'react-icons/fa';
+import { FaSearch } from 'react-icons/fa';
 
 export default function TaskIndex({ auth, tasks, teknisi, filters }) {
     const [showAssignModal, setShowAssignModal] = useState(null);
@@ -83,9 +83,7 @@ export default function TaskIndex({ auth, tasks, teknisi, filters }) {
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    {/* Filter & Search Bar */}
                     <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                        {/* Tabs Filter Status */}
                         <div className="flex space-x-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
                             {['all', 'pending', 'assigned', 'completed'].map((status) => (
                                 <button
@@ -102,7 +100,6 @@ export default function TaskIndex({ auth, tasks, teknisi, filters }) {
                             ))}
                         </div>
 
-                        {/* Search Box */}
                         <form onSubmit={handleSearch} className="flex w-full md:w-1/3">
                             <TextInput
                                 type="text"
@@ -119,7 +116,6 @@ export default function TaskIndex({ auth, tasks, teknisi, filters }) {
 
                     {tasks.data.length > 0 ? (
                         <>
-                            {/* Desktop Table */}
                             <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
@@ -160,7 +156,6 @@ export default function TaskIndex({ auth, tasks, teknisi, filters }) {
                                 </table>
                             </div>
 
-                            {/* Mobile Cards */}
                             <div className="md:hidden space-y-4">
                                 {tasks.data.map((task) => (
                                     <div key={task.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">

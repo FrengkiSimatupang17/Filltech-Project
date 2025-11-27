@@ -9,7 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Hash; // <-- Pastikan Hash diimport
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,16 +27,13 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         
-        // Ambil data yang divalidasi, kecuali password (kita handle manual)
         $data = $request->except(['password', 'password_confirmation']);
         $user->fill($data);
         
-        // LOGIC PASSWORD BARU (Untuk User Google)
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
 
-        // LOGIC ID UNIK
         if (!$user->id_unik && $request->rt && $request->rw && $request->blok && $request->nomor_rumah) {
             $datePrefix = now()->format('Ymd');
             $rt = str_pad($request->rt, 3, '0', STR_PAD_LEFT);
@@ -56,7 +53,6 @@ class ProfileController extends Controller
         return Redirect::route('dashboard')->with('success', 'Profil berhasil diperbarui!');
     }
 
-    // ... (destroy method tetap sama)
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([

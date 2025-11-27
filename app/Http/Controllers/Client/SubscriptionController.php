@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
 {
@@ -27,7 +25,7 @@ class SubscriptionController extends Controller
             ->first();
 
         return Inertia::render('Client/Subscribe', [
-            'packages' => $existingSubscription ? [] : Package::select('id', 'name', 'price', 'speed', 'description')->orderBy('price', 'asc')->get(),
+            'packages' => $existingSubscription ? [] : Package::orderBy('price', 'asc')->get(),
             'currentSubscription' => $existingSubscription,
         ]);
     }
@@ -49,28 +47,19 @@ class SubscriptionController extends Controller
                 ->with('error', 'Anda sudah memiliki langganan aktif atau sedang diproses.');
         }
 
-        try {
-            DB::transaction(function () use ($request, $user) {
-                $package = Package::findOrFail($request->package_id);
+        Subscription::create([
+            'user_id' => $user->id,
+            'package_id' => $request->package_id,
+            'status' => 'pending',
+        ]);
 
-                Subscription::create([
-                    'user_id' => $user->id,
-                    'package_id' => $package->id,
-                    'status' => 'pending',
-                ]);
+        $admins = User::where('role', 'administrator')->get();
+        Notification::send($admins, new SystemAlert(
+            'Permintaan Langganan Baru dari ' . $user->name,
+            route('admin.subscriptions.index'),
+            'subscription'
+        ));
 
-                $admins = User::admins()->get();
-                Notification::send($admins, new SystemAlert(
-                    'Permintaan Langganan Baru dari ' . $user->name,
-                    route('admin.subscriptions.index'),
-                    'subscription'
-                ));
-            });
-
-            return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim. Mohon tunggu verifikasi admin.');
-        } catch (\Exception $e) {
-            Log::error('Subscription create failed: '.$e->getMessage(), ['user_id' => $user->id, 'package_id' => $request->package_id]);
-            return Redirect::route('client.subscribe.index')->with('error', 'Terjadi kesalahan saat mengajukan langganan, silakan coba lagi.');
-        }
+        return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim. Mohon tunggu verifikasi admin.');
     }
 }

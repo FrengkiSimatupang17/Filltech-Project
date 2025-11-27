@@ -221,7 +221,7 @@ export default function ClientIndex({ auth, users, filters }) {
             <Modal show={showCreateModal} onClose={closeModal}>
                 <form onSubmit={submitCreate} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Tambah Klien Baru</h2>
-                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={true} />
+                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={true} roleContext="client" />
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton disabled={processing}>Simpan</PrimaryButton>
@@ -232,7 +232,7 @@ export default function ClientIndex({ auth, users, filters }) {
             <Modal show={!!showEditModal} onClose={closeModal}>
                 <form onSubmit={submitEdit} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Edit Klien: {data.name}</h2>
-                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={false} />
+                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={false} roleContext="client" />
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton disabled={processing}>Simpan</PrimaryButton>

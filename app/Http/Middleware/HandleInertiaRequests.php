@@ -20,7 +20,6 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
-                // KIRIM NOTIFIKASI (Limit 5 terbaru)
                 'notifications' => $request->user() 
                     ? $request->user()->unreadNotifications()->take(5)->get() 
                     : [],

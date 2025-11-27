@@ -4,7 +4,7 @@ import { useState } from 'react';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton'; // Pastikan ada
+import SecondaryButton from '@/Components/SecondaryButton';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
 
@@ -27,7 +27,6 @@ export default function ReportIndex({ auth, reports }) {
     };
 
     const handleExport = () => {
-        // Membuka URL download di tab baru agar tidak mengganggu halaman aktif
         const url = route('admin.reports.export', dates);
         window.open(url, '_blank');
     };

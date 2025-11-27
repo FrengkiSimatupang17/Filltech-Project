@@ -19,7 +19,6 @@ class NotificationController extends Controller
         return redirect()->back();
     }
     
-    
     public function index()
     {
         $notifications = Auth::user()->notifications()->paginate(20);
