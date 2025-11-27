@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="filltech">
+<html lang="id">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="Filltech — Internet Fiber Optic di Batam. Stabil, terjangkau, dan didukung teknisi profesional 24/7.">
+        <meta name="robots" content="index, follow">
         <meta name="theme-color" content="#2563eb">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        
+        <title inertia>{{ config('app.name', 'Filltech Berkah Bersama') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
