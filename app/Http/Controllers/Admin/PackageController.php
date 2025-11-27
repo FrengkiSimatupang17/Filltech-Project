@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\PackageRequest;
 use App\Models\Package;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -15,10 +16,12 @@ class PackageController extends Controller
         $query = Package::query();
 
         if ($request->has('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('speed', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            $search = strip_tags($request->search);
+            
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('speed', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
 
@@ -32,30 +35,17 @@ class PackageController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'speed' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-        ]);
 
-        Package::create($request->all());
+    public function store(PackageRequest $request)
+    {
+        Package::create($request->validated());
 
         return Redirect::route('admin.packages.index')->with('success', 'Paket berhasil ditambahkan!');
     }
 
-    public function update(Request $request, Package $package)
+    public function update(PackageRequest $request, Package $package)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'speed' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-        ]);
-
-        $package->update($request->all());
+        $package->update($request->validated());
 
         return Redirect::route('admin.packages.index')->with('success', 'Paket berhasil diperbarui.');
     }

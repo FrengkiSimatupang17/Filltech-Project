@@ -8,6 +8,7 @@ import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Pagination from '@/Components/Pagination';
 import EmptyState from '@/Components/EmptyState';
+import LoadingOverlay from '@/Components/LoadingOverlay';
 import { FaFileInvoiceDollar, FaCalendarAlt, FaUpload, FaHistory } from 'react-icons/fa';
 
 export default function Index({ auth, invoices }) {
@@ -75,6 +76,9 @@ export default function Index({ auth, invoices }) {
             header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Tagihan & Pembayaran</h2>}
         >
             <Head title="Tagihan Saya" />
+            
+            {/* Integrasi Loading Overlay */}
+            <LoadingOverlay show={processing} message="Mengunggah bukti pembayaran..." />
 
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">

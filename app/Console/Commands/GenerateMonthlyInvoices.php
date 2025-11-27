@@ -18,38 +18,40 @@ class GenerateMonthlyInvoices extends Command
     {
         $this->info('Starting to generate monthly invoices...');
 
-        $activeSubscriptions = Subscription::with(['user', 'package'])
-            ->where('status', 'active')
-            ->get();
-
         $count = 0;
         $now = Carbon::now();
 
-        foreach ($activeSubscriptions as $subscription) {
-            $user = $subscription->user;
-            $package = $subscription->package;
+        // Gunakan chunk untuk performa lebih baik saat data banyak
+        Subscription::with(['user', 'package'])
+            ->where('status', 'active')
+            ->chunk(100, function ($subscriptions) use ($now, &$count) {
+                foreach ($subscriptions as $subscription) {
+                    $user = $subscription->user;
+                    $package = $subscription->package;
 
-            $invoiceExists = Invoice::where('subscription_id', $subscription->id)
-                ->where('type', 'monthly')
-                ->whereYear('created_at', $now->year)
-                ->whereMonth('created_at', $now->month)
-                ->exists();
+                    // Cek apakah tagihan bulan ini sudah ada
+                    $invoiceExists = Invoice::where('subscription_id', $subscription->id)
+                        ->where('type', 'monthly')
+                        ->whereYear('created_at', $now->year)
+                        ->whereMonth('created_at', $now->month)
+                        ->exists();
 
-            if (!$invoiceExists) {
-                $invoice = Invoice::create([
-                    'user_id' => $user->id,
-                    'subscription_id' => $subscription->id,
-                    'invoice_number' => 'INV-MTH-' . $now->format('Ym') . '-' . $user->id,
-                    'amount' => $package->price,
-                    'status' => 'pending',
-                    'type' => 'monthly',
-                    'due_date' => $now->addDays(7),
-                ]);
+                    if (!$invoiceExists) {
+                        $invoice = Invoice::create([
+                            'user_id' => $user->id,
+                            'subscription_id' => $subscription->id,
+                            'invoice_number' => 'INV-MTH-' . $now->format('Ym') . '-' . $user->id,
+                            'amount' => $package->price,
+                            'status' => 'pending',
+                            'type' => 'monthly',
+                            'due_date' => $now->copy()->addDays(7),
+                        ]);
 
-                $user->notify(new NewInvoiceNotification($invoice));
-                $count++;
-            }
-        }
+                        $user->notify(new NewInvoiceNotification($invoice));
+                        $count++;
+                    }
+                }
+            });
 
         $this->info("Successfully generated $count new monthly invoices.");
         return 0;

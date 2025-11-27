@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Channels; // <-- Pastikan ini 'App\Channels' BUKAN 'App'
+namespace App\Channels;
 
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
@@ -9,6 +9,10 @@ class WhatsAppChannel
 {
     public function send($notifiable, Notification $notification)
     {
+        if (!method_exists($notification, 'toWhatsApp')) {
+            return;
+        }
+
         $message = $notification->toWhatsApp($notifiable);
         $to = $notifiable->phone_number;
 
@@ -17,6 +21,8 @@ class WhatsAppChannel
             return;
         }
 
-        Log::info("Simulating WhatsApp send to {$to}: {$message}");
+        // Di sini tempat integrasi API WhatsApp Real (cth: Curl ke Fonnte/Twilio)
+        // Saat ini kita simulasikan ke Log agar aplikasi tidak error
+        Log::info("WhatsApp SENT to {$to}: \n{$message}");
     }
 }

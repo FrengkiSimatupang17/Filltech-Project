@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
+import LoadingOverlay from '@/Components/LoadingOverlay';
 import { FaWifi, FaCheckCircle, FaClock, FaInfoCircle } from 'react-icons/fa';
 
 export default function Subscribe({ auth, packages, currentSubscription }) {
@@ -24,7 +25,6 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
         }).format(amount);
     };
 
-    // Sub-component: Kartu Status Langganan (Jika sudah ada)
     const SubscriptionStatusCard = ({ sub }) => (
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <div className={`p-6 text-center text-white ${sub.status === 'active' ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-yellow-400 to-orange-500'}`}>
@@ -67,7 +67,6 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
         </div>
     );
 
-    // Sub-component: Kartu Harga (Pricing Card)
     const PricingCard = ({ pkg }) => (
         <div className="relative bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col">
             <div className="p-6 border-b border-gray-50 bg-gradient-to-b from-white to-gray-50/50">
@@ -99,7 +98,7 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
                     onClick={() => handleSubscribe(pkg.id)}
                     disabled={processing}
                 >
-                    {processing ? 'Memproses...' : 'Pilih Paket Ini'}
+                    Pilih Paket Ini
                 </PrimaryButton>
             </div>
         </div>
@@ -111,11 +110,12 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
             header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Berlangganan</h2>}
         >
             <Head title="Pilih Paket" />
+            
+            <LoadingOverlay show={processing} message="Memproses langganan..." />
 
             <div className="py-8 sm:py-12 bg-gray-50 min-h-screen">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    {/* Judul Halaman */}
                     <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 px-4">
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
                             {currentSubscription ? 'Status Langganan Anda' : 'Pilih Paket Internet Terbaik'}
@@ -127,7 +127,6 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
                         )}
                     </div>
 
-                    {/* Konten Utama */}
                     {currentSubscription ? (
                         <SubscriptionStatusCard sub={currentSubscription} />
                     ) : (
