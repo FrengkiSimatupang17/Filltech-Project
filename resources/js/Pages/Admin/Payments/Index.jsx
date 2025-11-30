@@ -1,44 +1,59 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import Pagination from '@/Components/Pagination';
+import EmptyState from '@/Components/EmptyState';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
-import PrimaryButton from '@/Components/PrimaryButton';
-import DangerButton from '@/Components/DangerButton';
+import LoadingOverlay from '@/Components/LoadingOverlay';
 
-export default function PaymentIndex({ auth, payments }) {
-    const [viewProofModal, setViewProofModal] = useState(false);
-    const [selectedProof, setSelectedProof] = useState(null);
-    
-    const { post, processing, reset } = useForm({
-        action: '',
-    });
+export default function Index({ auth, payments }) {
+    const [showProofModal, setShowProofModal] = useState(false);
+    const [selectedProofUrl, setSelectedProofUrl] = useState(null);
+    const [processingId, setProcessingId] = useState(null); // State untuk loading per item
 
-    const handleAction = (paymentId, actionType) => {
-        if (confirm(`Apakah Anda yakin ingin ${actionType === 'approve' ? 'menyetujui' : 'menolak'} pembayaran ini?`)) {
-            post(route('admin.payments.update', paymentId), {
-                data: { action: actionType },
+    const handleVerification = (paymentId, action) => {
+        const actionText = action === 'approve' ? 'MENYETUJUI' : 'MENOLAK';
+        
+        if (confirm(`Apakah Anda yakin ingin ${actionText} pembayaran ini? Tindakan ini tidak dapat dibatalkan.`)) {
+            setProcessingId(paymentId); // Aktifkan loading
+
+            // Menggunakan POST ke method update di controller (dengan _method: patch)
+            router.post(route('admin.payments.update', paymentId), {
+                _method: 'patch', 
+                action: action,
+            }, {
                 preserveScroll: true,
-                onSuccess: () => reset(),
+                onFinish: () => setProcessingId(null), // Matikan loading setelah selesai
             });
         }
     };
 
     const openProofModal = (url) => {
-        setSelectedProof(url);
-        setViewProofModal(true);
+        setSelectedProofUrl(url);
+        setShowProofModal(true);
     };
 
+    const closeProofModal = () => {
+        setShowProofModal(false);
+        setSelectedProofUrl(null);
+    };
+
+    // Helper: Badge Status
     const getStatusBadge = (status) => {
-        switch(status) {
-            case 'verified': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Verified</span>;
-            case 'rejected': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
-            default: return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
+        switch (status) {
+            case 'pending': 
+                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">PENDING</span>;
+            case 'verified': 
+                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">LUNAS</span>;
+            case 'rejected': 
+                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">DITOLAK</span>;
+            default: 
+                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">-</span>;
         }
     };
 
-    const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    const formatRupiah = (amount) => new Intl.NumberFormat('id-ID').format(amount);
 
     return (
         <AuthenticatedLayout
@@ -47,148 +62,183 @@ export default function PaymentIndex({ auth, payments }) {
         >
             <Head title="Verifikasi Pembayaran" />
 
-            <div className="py-6 sm:py-12">
+            {/* Loading Overlay Global jika ada proses berat */}
+            <LoadingOverlay show={!!processingId} message="Memproses Verifikasi..." />
+
+            <div className="py-8">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User / Invoice</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {payments.data.length > 0 ? (
-                                    payments.data.map((payment) => (
-                                        <tr key={payment.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-gray-900">{payment.user_name}</div>
-                                                <div className="text-sm text-gray-500">{payment.invoice_number}</div>
-                                                <div className="text-xs text-gray-400 capitalize">{payment.invoice_type}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                                                {formatRupiah(payment.amount)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                    {payments.data.length > 0 ? (
+                        <>
+                            {/* --- DESKTOP TABLE --- */}
+                            <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klien</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tagihan</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {payments.data.map((payment) => (
+                                            <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-bold text-gray-900">{payment.user_name}</div>
+                                                    <div className="text-xs text-gray-500">{payment.user_email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-medium text-gray-900">{payment.invoice_number}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        Rp {formatRupiah(payment.amount)} 
+                                                        <span className="ml-2 uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] border border-gray-200">
+                                                            {payment.invoice_type}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {payment.payment_proof_url ? (
+                                                        <button 
+                                                            onClick={() => openProofModal(payment.payment_proof_url)}
+                                                            className="text-blue-600 hover:text-blue-800 text-xs font-semibold underline flex items-center gap-1"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                            Lihat Foto
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-xs italic">Tidak ada bukti</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {getStatusBadge(payment.status)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    {payment.status === 'pending' && (
+                                                        <div className="flex justify-end gap-2">
+                                                            <button 
+                                                                onClick={() => handleVerification(payment.id, 'approve')} 
+                                                                disabled={processingId === payment.id}
+                                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-bold shadow-sm transition disabled:opacity-50"
+                                                            >
+                                                                Terima
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleVerification(payment.id, 'reject')} 
+                                                                disabled={processingId === payment.id}
+                                                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs font-bold shadow-sm transition disabled:opacity-50"
+                                                            >
+                                                                Tolak
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {payment.status !== 'pending' && (
+                                                        <span className="text-gray-400 text-xs italic">Selesai</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* --- MOBILE CARD VIEW --- */}
+                            <div className="md:hidden space-y-4">
+                                {payments.data.map((payment) => (
+                                    <div key={payment.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
+                                            <div>
+                                                <h3 className="font-bold text-gray-800 text-sm">{payment.user_name}</h3>
+                                                <p className="text-xs text-gray-500">{payment.invoice_number}</p>
+                                            </div>
+                                            {getStatusBadge(payment.status)}
+                                        </div>
+
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Jumlah Tagihan</span>
+                                                <span className="font-bold text-gray-800">Rp {formatRupiah(payment.amount)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Tipe Pembayaran</span>
+                                                <span className="capitalize text-gray-700">{payment.invoice_type}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-500">Bukti Transfer</span>
                                                 {payment.payment_proof_url ? (
                                                     <button 
                                                         onClick={() => openProofModal(payment.payment_proof_url)}
-                                                        className="text-blue-600 hover:text-blue-900 text-sm underline"
+                                                        className="text-blue-600 font-medium text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
                                                     >
-                                                        Lihat Bukti
+                                                        Lihat
                                                     </button>
                                                 ) : (
-                                                    <span className="text-gray-400 text-sm">Tidak ada</span>
+                                                    <span className="text-gray-400 text-xs">n/a</span>
                                                 )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {getStatusBadge(payment.status)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                                {payment.status === 'pending' && (
-                                                    <>
-                                                        <PrimaryButton 
-                                                            className="bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-900"
-                                                            onClick={() => handleAction(payment.id, 'approve')}
-                                                            disabled={processing}
-                                                        >
-                                                            ✓
-                                                        </PrimaryButton>
-                                                        <DangerButton 
-                                                            onClick={() => handleAction(payment.id, 'reject')}
-                                                            disabled={processing}
-                                                        >
-                                                            ✕
-                                                        </DangerButton>
-                                                    </>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-gray-500">Belum ada data pembayaran.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="md:hidden space-y-4">
-                        {payments.data.length > 0 ? (
-                            payments.data.map((payment) => (
-                                <div key={payment.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-gray-800">{payment.user_name}</h3>
-                                            <p className="text-xs text-gray-500">{payment.invoice_number} ({payment.invoice_type})</p>
+                                            </div>
                                         </div>
-                                        {getStatusBadge(payment.status)}
-                                    </div>
-                                    
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div className="text-lg font-bold text-gray-800">
-                                            {formatRupiah(payment.amount)}
-                                        </div>
-                                        <div className="text-xs text-gray-400">{payment.created_at}</div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                                        {payment.payment_proof_url ? (
-                                            <button 
-                                                onClick={() => openProofModal(payment.payment_proof_url)}
-                                                className="text-blue-600 text-xs font-semibold"
-                                            >
-                                                📷 Lihat Bukti
-                                            </button>
-                                        ) : (
-                                            <span className="text-gray-400 text-xs">Tanpa Bukti</span>
-                                        )}
 
                                         {payment.status === 'pending' && (
-                                            <div className="flex space-x-2">
+                                            <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-gray-100">
                                                 <button 
-                                                    onClick={() => handleAction(payment.id, 'reject')}
-                                                    className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold"
+                                                    onClick={() => handleVerification(payment.id, 'approve')} 
+                                                    disabled={processingId === payment.id}
+                                                    className="w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-sm disabled:opacity-50"
                                                 >
-                                                    Tolak
+                                                    Terima
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleAction(payment.id, 'approve')}
-                                                    className="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold shadow"
+                                                    onClick={() => handleVerification(payment.id, 'reject')} 
+                                                    disabled={processingId === payment.id}
+                                                    className="w-full py-2.5 bg-white border border-red-500 text-red-500 rounded-lg text-sm font-bold hover:bg-red-50 transition disabled:opacity-50"
                                                 >
-                                                    Setuju
+                                                    Tolak
                                                 </button>
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center p-4 text-gray-500 bg-white rounded-lg">Belum ada data.</div>
-                        )}
-                    </div>
+                                ))}
+                            </div>
 
-                    <div className="mt-6">
-                        <Pagination links={payments.links} />
-                    </div>
+                            {/* --- PAGINATION --- */}
+                            <div className="mt-6">
+                                <Pagination links={payments.links} />
+                            </div>
+                        </>
+                    ) : (
+                        <EmptyState
+                            title="Tidak Ada Pembayaran"
+                            message="Belum ada data pembayaran masuk yang perlu diverifikasi saat ini."
+                        />
+                    )}
                 </div>
             </div>
 
-            <Modal show={viewProofModal} onClose={() => setViewProofModal(false)}>
+            {/* MODAL BUKTI PEMBAYARAN */}
+            <Modal show={showProofModal} onClose={closeProofModal}>
                 <div className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">Bukti Pembayaran</h2>
-                    {selectedProof && (
-                        <div className="flex justify-center bg-gray-100 rounded p-2">
-                            <img src={selectedProof} alt="Bukti Transfer" className="max-h-[80vh] max-w-full rounded" />
-                        </div>
-                    )}
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-bold text-gray-900">Bukti Pembayaran</h2>
+                        <button onClick={closeProofModal} className="text-gray-400 hover:text-gray-600 transition">
+                            <span className="text-2xl">&times;</span>
+                        </button>
+                    </div>
+                    <div className="flex justify-center bg-gray-100 rounded-lg p-2 border border-gray-200 min-h-[200px] items-center">
+                        {selectedProofUrl ? (
+                            <img 
+                                src={selectedProofUrl} 
+                                alt="Bukti Transfer" 
+                                className="max-h-[70vh] max-w-full object-contain rounded shadow-sm" 
+                            />
+                        ) : (
+                            <p className="text-gray-500 italic">Gambar tidak dapat dimuat.</p>
+                        )}
+                    </div>
                     <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={() => setViewProofModal(false)}>
+                        <SecondaryButton onClick={closeProofModal}>
                             Tutup
                         </SecondaryButton>
                     </div>

@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -13,13 +16,25 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            // Password nullable to support Google Login (Socialite)
+            $table->string('password')->nullable();
             
+            // Role & Identity
             $table->string('id_unik', 100)->unique()->nullable();
             $table->enum('role', ['client', 'administrator', 'teknisi'])->default('client');
-            $table->text('address_detail')->nullable();
             $table->string('phone_number', 20)->nullable();
             
+            // Address Data
+            $table->text('alamat')->nullable();
+            $table->string('rt', 3)->nullable();
+            $table->string('rw', 3)->nullable();
+            $table->string('blok', 10)->nullable();
+            $table->string('nomor_rumah', 10)->nullable();
+
+            // Socialite (Google Login) Fields
+            $table->string('google_id')->nullable();
+            $table->string('google_avatar')->nullable();
+
             $table->rememberToken();
             $table->timestamps();
         });
@@ -40,6 +55,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('users');

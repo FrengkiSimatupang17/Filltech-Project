@@ -18,7 +18,7 @@ class Task extends Model
         'description',
         'type',
         'status',
-        'priority',
+        // 'priority', <--- DIHAPUS
         'completed_at'
     ];
 

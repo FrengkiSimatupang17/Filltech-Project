@@ -102,7 +102,6 @@ class PaymentVerificationController extends Controller
                         'description' => 'Lakukan pemasangan WiFi paket ' . ($subscription->package->name ?? 'Unknown'),
                         'type' => 'installation',
                         'status' => 'pending',
-                        'priority' => 'high',
                     ]);
                 }
             }

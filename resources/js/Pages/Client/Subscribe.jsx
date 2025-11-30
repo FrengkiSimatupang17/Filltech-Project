@@ -1,18 +1,21 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import LoadingOverlay from '@/Components/LoadingOverlay';
+import { useState } from 'react';
 import { FaWifi, FaCheckCircle, FaClock, FaInfoCircle } from 'react-icons/fa';
 
 export default function Subscribe({ auth, packages, currentSubscription }) {
-    const { post, processing } = useForm({
-        package_id: null
-    });
+    const [processing, setProcessing] = useState(false);
 
     const handleSubscribe = (packageId) => {
         if (confirm('Apakah Anda yakin ingin memilih paket ini?')) {
-            post(route('client.subscribe.store'), {
-                data: { package_id: packageId },
+            router.post(route('client.subscribe.store'), {
+                package_id: packageId 
+            }, {
+                onStart: () => setProcessing(true),
+                onFinish: () => setProcessing(false),
+                preserveScroll: true,
             });
         }
     };
@@ -111,6 +114,7 @@ export default function Subscribe({ auth, packages, currentSubscription }) {
         >
             <Head title="Pilih Paket" />
             
+            {/* Loading Overlay akan muncul saat state processing = true */}
             <LoadingOverlay show={processing} message="Memproses langganan..." />
 
             <div className="py-8 sm:py-12 bg-gray-50 min-h-screen">

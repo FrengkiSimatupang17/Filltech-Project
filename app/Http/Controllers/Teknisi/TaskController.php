@@ -22,6 +22,7 @@ class TaskController extends Controller
                 $q->where('title', 'like', '%' . $request->search . '%')
                   ->orWhereHas('client', function ($sq) use ($request) {
                       $sq->where('name', 'like', '%' . $request->search . '%')
+                         ->orWhere('alamat', 'like', '%' . $request->search . '%')
                          ->orWhere('nomor_rumah', 'like', '%' . $request->search . '%');
                   });
             });
@@ -42,7 +43,7 @@ class TaskController extends Controller
                 'type' => $task->type,
                 'status' => $task->status,
                 'client_name' => $task->client ? $task->client->name : 'Klien Dihapus',
-                'client_address' => $task->client ? "Blok {$task->client->blok} No. {$task->client->nomor_rumah}" : '-',
+                'client_address' => $task->client ? $task->client->address_detail : '-', 
                 'client_phone' => $task->client ? $task->client->phone_number : '-',
                 'created_at' => $task->created_at->translatedFormat('d M Y'),
             ]);

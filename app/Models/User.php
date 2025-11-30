@@ -22,6 +22,7 @@ class User extends Authenticatable
         'phone_number',
         'google_id',
         'google_avatar',
+        'alamat',
         'rt',
         'rw',
         'blok',
@@ -81,10 +82,26 @@ class User extends Authenticatable
     public function getAddressDetailAttribute()
     {
         $parts = [];
-        if ($this->blok) $parts[] = "Blok {$this->blok}";
-        if ($this->nomor_rumah) $parts[] = "No. {$this->nomor_rumah}";
-        if ($this->rt) $parts[] = "RT {$this->rt}";
-        if ($this->rw) $parts[] = "RW {$this->rw}";
+        
+        if ($this->alamat) {
+            $parts[] = $this->alamat;
+        }
+
+        if ($this->blok) {
+            $parts[] = "Blok {$this->blok}";
+        }
+
+        if ($this->nomor_rumah) {
+            $parts[] = "No. {$this->nomor_rumah}";
+        }
+
+        $rtRw = [];
+        if ($this->rt) $rtRw[] = "RT.{$this->rt}";
+        if ($this->rw) $rtRw[] = "RW.{$this->rw}";
+        
+        if (!empty($rtRw)) {
+            $parts[] = implode('/', $rtRw);
+        }
         
         return empty($parts) ? '-' : implode(', ', $parts);
     }

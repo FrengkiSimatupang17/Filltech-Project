@@ -18,11 +18,12 @@ export default function ClientIndex({ auth, users, filters }) {
     const [showDeleteModal, setShowDeleteModal] = useState(null);
     const [search, setSearch] = useState(filters.search || '');
 
+    // Form State: Mencakup semua field User + Alamat
     const { data, setData, post, patch, delete: destroy, processing, errors, reset } = useForm({
         id: '',
         name: '',
         email: '',
-        role: 'client',
+        role: 'client', // Default role
         id_unik: '',
         phone_number: '',
         rt: '',
@@ -43,7 +44,7 @@ export default function ClientIndex({ auth, users, filters }) {
 
     const openCreateModal = () => {
         reset();
-        setData('role', 'client');
+        setData('role', 'client'); // Pastikan role di-set
         setShowCreateModal(true);
     };
 
@@ -105,12 +106,12 @@ export default function ClientIndex({ auth, users, filters }) {
         >
             <Head title="Manajemen Klien" />
             
-            {/* Integrasi Loading Overlay */}
             <LoadingOverlay show={processing} />
 
             <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
+                    {/* Header & Search */}
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                         <form onSubmit={handleSearch} className="w-full md:w-1/3 flex">
                             <TextInput
@@ -131,6 +132,7 @@ export default function ClientIndex({ auth, users, filters }) {
 
                     {users.data.length > 0 ? (
                         <>
+                            {/* Desktop Table */}
                             <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
@@ -173,6 +175,7 @@ export default function ClientIndex({ auth, users, filters }) {
                                 </table>
                             </div>
 
+                            {/* Mobile Card View */}
                             <div className="md:hidden space-y-4">
                                 {users.data.map((user) => (
                                     <div key={user.id} className="bg-white p-4 rounded-lg shadow border border-gray-100">
@@ -222,10 +225,18 @@ export default function ClientIndex({ auth, users, filters }) {
                 </div>
             </div>
 
+            {/* Modal Create */}
             <Modal show={showCreateModal} onClose={closeModal}>
                 <form onSubmit={submitCreate} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Tambah Klien Baru</h2>
-                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={true} />
+                    {/* MENGGUNAKAN roleContext='client' UNTUK MENYEMBUNYIKAN DROPDOWN ROLE */}
+                    <UserFormFields 
+                        data={data} 
+                        setData={setData} 
+                        errors={errors} 
+                        isCreate={true} 
+                        roleContext="client" 
+                    />
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton disabled={processing}>Simpan</PrimaryButton>
@@ -233,10 +244,18 @@ export default function ClientIndex({ auth, users, filters }) {
                 </form>
             </Modal>
 
+            {/* Modal Edit */}
             <Modal show={!!showEditModal} onClose={closeModal}>
                 <form onSubmit={submitEdit} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Edit Klien: {data.name}</h2>
-                    <UserFormFields data={data} setData={setData} errors={errors} isCreate={false} />
+                    {/* MENGGUNAKAN roleContext='client' */}
+                    <UserFormFields 
+                        data={data} 
+                        setData={setData} 
+                        errors={errors} 
+                        isCreate={false} 
+                        roleContext="client" 
+                    />
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
                         <PrimaryButton disabled={processing}>Simpan</PrimaryButton>
@@ -244,6 +263,7 @@ export default function ClientIndex({ auth, users, filters }) {
                 </form>
             </Modal>
 
+            {/* Modal Delete */}
             <Modal show={!!showDeleteModal} onClose={closeModal}>
                 <form onSubmit={submitDelete} className="p-6 text-center">
                     <h2 className="text-lg font-bold text-gray-900">Hapus Klien?</h2>
