@@ -1,117 +1,84 @@
 import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
+import SelectInput from "@/Components/SelectInput";
 import TextInput from "@/Components/TextInput";
-import TextArea from "@/Components/TextArea";
 
-export default function UserFormFields({ data, setData, errors, isCreate = false }) {
+export default function UserFormFields({ data, setData, errors, isCreate = false, roleContext = 'client' }) {
     return (
         <>
-            {/* --- Informasi Akun --- */}
             <div className="mt-4">
                 <InputLabel htmlFor="name" value="Nama Lengkap" />
-                <TextInput
-                    id="name"
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                    className="mt-1 block w-full"
-                    required
-                    placeholder="Nama Klien"
+                <TextInput 
+                    id="name" 
+                    value={data.name} 
+                    onChange={(e) => setData('name', e.target.value)} 
+                    className="mt-1 block w-full" 
+                    required 
                 />
                 <InputError message={errors.name} className="mt-2" />
             </div>
             
             <div className="mt-4">
                 <InputLabel htmlFor="email" value="Email" />
-                <TextInput
-                    id="email"
-                    type="email"
-                    value={data.email}
-                    onChange={(e) => setData('email', e.target.value)}
-                    className="mt-1 block w-full"
-                    required
-                    placeholder="email@contoh.com"
+                <TextInput 
+                    id="email" 
+                    type="email" 
+                    value={data.email} 
+                    onChange={(e) => setData('email', e.target.value)} 
+                    className="mt-1 block w-full" 
+                    required 
                 />
                 <InputError message={errors.email} className="mt-2" />
             </div>
 
             <div className="mt-4">
                 <InputLabel htmlFor="phone_number" value="No. Telepon (WhatsApp)" />
-                <TextInput
-                    id="phone_number"
-                    value={data.phone_number}
-                    onChange={(e) => setData('phone_number', e.target.value)}
-                    className="mt-1 block w-full"
-                    placeholder="0812..."
+                <TextInput 
+                    id="phone_number" 
+                    value={data.phone_number} 
+                    onChange={(e) => setData('phone_number', e.target.value)} 
+                    className="mt-1 block w-full" 
                 />
                 <InputError message={errors.phone_number} className="mt-2" />
             </div>
+
+            {roleContext !== 'client' && (
+                <div className="mt-4">
+                    <InputLabel htmlFor="role" value="Role" />
+                    <SelectInput id="role" value={data.role} className="mt-1 block w-full" onChange={(e) => setData('role', e.target.value)}>
+                        <option value="client">Client</option>
+                        <option value="teknisi">Teknisi</option>
+                        <option value="administrator">Administrator</option>
+                    </SelectInput>
+                    <InputError message={errors.role} className="mt-2" />
+                </div>
+            )}
             
-            {/* --- Password Section --- */}
             <div className="mt-4">
                 <InputLabel htmlFor="password" value={isCreate ? "Password" : "Password Baru (Opsional)"} />
-                <TextInput
-                    id="password"
-                    type="password"
-                    value={data.password}
-                    onChange={(e) => setData('password', e.target.value)}
-                    className="mt-1 block w-full"
-                    placeholder={isCreate ? "Minimal 8 karakter" : "Kosongkan jika tidak diubah"}
-                />
+                <TextInput id="password" type="password" value={data.password} onChange={(e) => setData('password', e.target.value)} className="mt-1 block w-full" />
                 <InputError message={errors.password} className="mt-2" />
             </div>
 
             <div className="mt-4">
                 <InputLabel htmlFor="password_confirmation" value="Konfirmasi Password" />
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    value={data.password_confirmation}
-                    onChange={(e) => setData('password_confirmation', e.target.value)}
-                    className="mt-1 block w-full"
-                    placeholder="Ulangi password"
-                />
+                <TextInput id="password_confirmation" type="password" value={data.password_confirmation} onChange={(e) => setData('password_confirmation', e.target.value)} className="mt-1 block w-full" />
                 <InputError message={errors.password_confirmation} className="mt-2" />
             </div>
 
-            {/* --- Data Alamat --- */}
-            <h3 className="text-md font-bold text-gray-800 mt-8 mb-4 border-b pb-2">Data Alamat Pemasangan</h3>
+            <h3 className="text-md font-medium text-gray-800 mt-6">Data Alamat</h3>
 
             <div className="mt-4">
-                <InputLabel htmlFor="alamat" value="Alamat Lengkap (Jalan / Kawasan)" />
-                <TextArea
-                    id="alamat"
-                    value={data.alamat || ''}
-                    onChange={(e) => setData('alamat', e.target.value)}
-                    className="mt-1 block w-full"
-                    rows="2"
-                    placeholder="Contoh: Jl. Merdeka No. 10, Depan Masjid..."
+                <InputLabel htmlFor="id_unik" value="ID Unik" />
+                {/* HAPUS: bg-gray-50 text-gray-500 agar teks terlihat jelas */}
+                <TextInput 
+                    id="id_unik" 
+                    value={data.id_unik} 
+                    onChange={(e) => setData('id_unik', e.target.value)} 
+                    className="mt-1 block w-full" 
+                    placeholder="Biarkan kosong untuk auto-generate"
                 />
-                <InputError message={errors.alamat} className="mt-2" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-4">
-                <div>
-                    <InputLabel htmlFor="blok" value="Blok" />
-                    <TextInput
-                        id="blok"
-                        className="mt-1 block w-full"
-                        value={data.blok || ''}
-                        onChange={(e) => setData('blok', e.target.value)}
-                        placeholder="A"
-                    />
-                    <InputError className="mt-2" message={errors.blok} />
-                </div>
-                <div>
-                    <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
-                    <TextInput
-                        id="nomor_rumah"
-                        className="mt-1 block w-full"
-                        value={data.nomor_rumah || ''}
-                        onChange={(e) => setData('nomor_rumah', e.target.value)}
-                        placeholder="12B"
-                    />
-                    <InputError className="mt-2" message={errors.nomor_rumah} />
-                </div>
+                <InputError message={errors.id_unik} className="mt-2" />
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-4">
@@ -120,7 +87,7 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                     <TextInput
                         id="rt"
                         className="mt-1 block w-full"
-                        value={data.rt || ''}
+                        value={data.rt}
                         onChange={(e) => setData('rt', e.target.value)}
                         placeholder="001"
                     />
@@ -131,7 +98,7 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                     <TextInput
                         id="rw"
                         className="mt-1 block w-full"
-                        value={data.rw || ''}
+                        value={data.rw}
                         onChange={(e) => setData('rw', e.target.value)}
                         placeholder="005"
                     />
@@ -139,16 +106,29 @@ export default function UserFormFields({ data, setData, errors, isCreate = false
                 </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-100">
-                <InputLabel htmlFor="id_unik" value="ID Pelanggan (Opsional - Auto Generate)" />
-                <TextInput
-                    id="id_unik"
-                    value={data.id_unik || ''}
-                    onChange={(e) => setData('id_unik', e.target.value)}
-                    className="mt-1 block w-full bg-gray-50 text-gray-500"
-                    placeholder="Biarkan kosong untuk auto-generate"
-                />
-                <InputError message={errors.id_unik} className="mt-2" />
+            <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <InputLabel htmlFor="blok" value="Blok" />
+                    <TextInput
+                        id="blok"
+                        className="mt-1 block w-full"
+                        value={data.blok}
+                        onChange={(e) => setData('blok', e.target.value)}
+                        placeholder="A"
+                    />
+                    <InputError className="mt-2" message={errors.blok} />
+                </div>
+                <div>
+                    <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
+                    <TextInput
+                        id="nomor_rumah"
+                        className="mt-1 block w-full"
+                        value={data.nomor_rumah}
+                        onChange={(e) => setData('nomor_rumah', e.target.value)}
+                        placeholder="12B"
+                    />
+                    <InputError className="mt-2" message={errors.nomor_rumah} />
+                </div>
             </div>
         </>
     );

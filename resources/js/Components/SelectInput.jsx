@@ -3,7 +3,8 @@ export default function SelectInput({ className = '', children, ...props }) {
         <select
             {...props}
             className={
-                'border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm min-h-[44px] sm:min-h-[38px] text-base sm:text-sm bg-white ' +
+                'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm ' +
+                'bg-white text-gray-900 ' +
                 className
             }
         >
