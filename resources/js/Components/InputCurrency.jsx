@@ -37,6 +37,10 @@ export default forwardRef(function InputCurrency({ className = '', isFocused = f
                 type="text"
                 className={
                     'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm pl-10 ' +
+                    // FORCE STYLE & AUTOFILL FIX:
+                    'bg-white text-gray-900 placeholder-gray-500 ' +
+                    '[&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_white] ' +
+                    '[&:-webkit-autofill]:-webkit-text-fill-color-gray-900 ' +
                     className
                 }
                 ref={ref}
