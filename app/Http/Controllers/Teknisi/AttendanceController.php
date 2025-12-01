@@ -26,15 +26,17 @@ class AttendanceController extends Controller
             ->paginate(10)
             ->through(fn ($att) => [
                 'id' => $att->id,
-                'date' => $att->clock_in->translatedFormat('l, d F Y'),
-                'clock_in' => $att->clock_in->translatedFormat('H:i:s'),
-                'clock_out' => $att->clock_out ? $att->clock_out->translatedFormat('H:i:s') : '-',
+                // PERBAIKAN: Konversi ke WIB (Asia/Jakarta) sebelum format tanggal
+                'date' => $att->clock_in->timezone('Asia/Jakarta')->translatedFormat('l, d F Y'),
+                'clock_in' => $att->clock_in->timezone('Asia/Jakarta')->translatedFormat('H:i:s'),
+                'clock_out' => $att->clock_out ? $att->clock_out->timezone('Asia/Jakarta')->translatedFormat('H:i:s') : '-',
             ]);
 
         $todayAttendanceData = $todayAttendance ? [
             'id' => $todayAttendance->id,
-            'clock_in' => $todayAttendance->clock_in->translatedFormat('d F Y, H:i'),
-            'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->translatedFormat('d F Y, H:i') : null,
+            // PERBAIKAN: Konversi ke WIB untuk tampilan status hari ini
+            'clock_in' => $todayAttendance->clock_in->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i'),
+            'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->timezone('Asia/Jakarta')->translatedFormat('d F Y, H:i') : null,
         ] : null;
 
         return Inertia::render('Teknisi/Attendance/Index', [

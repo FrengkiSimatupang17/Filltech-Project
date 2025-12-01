@@ -89,17 +89,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- TEKNISI ROUTES ---
-    Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
+Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
         
-        Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
-        Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+        // GROUP KHUSUS: WAJIB CLOCK-IN DULU (Mengamankan Akses Tugas dan Alat)
+        Route::middleware(['clock_in'])->group(function () {
+            Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
+            Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+            
+            Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
+            Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
+            Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
+        });
 
+        // ABSENSI (Dibiarkan bebas dari middleware 'clock_in' agar bisa absen)
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-
-        Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
-        Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
-        Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
     });
 });
 
