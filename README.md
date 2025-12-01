@@ -1,119 +1,77 @@
-# FILLTECH BERKAH BERSAMA - SISTEM MANAJEMEN ISP
+# 🔒 FILLTECH INTERNAL DOCUMENTATION
 
-![Filltech Banner](public/logo.png)
-
-**Filltech System** adalah aplikasi berbasis web modern untuk manajemen operasional Penyedia Layanan Internet (ISP). Aplikasi ini mengelola siklus hidup pelanggan mulai dari registrasi, berlangganan paket, penagihan otomatis, verifikasi pembayaran, hingga penugasan teknisi lapangan.
-
-Dibangun dengan arsitektur **Monolith Modern** menggunakan **Laravel 10**, **Inertia.js**, dan **React**, aplikasi ini dirancang untuk performa tinggi, keamanan ketat, dan pengalaman pengguna (UX) yang responsif.
+**Project Owner:** Frengki Simatupang
+**Last Updated:** November 2025
+**Status:** Production Ready (v1.0)
 
 ---
 
-## 🚀 Fitur Utama
-
-### 1. Multi-Role Dashboard
-* **Administrator:** Mengelola paket, verifikasi pembayaran, pantau pendapatan (grafik), dan manajemen user.
-* **Teknisi:** Menerima tugas lapangan, absen (clock-in/out), dan kelola logistik alat.
-* **Klien:** Mendaftar, memilih paket, melihat tagihan, upload bukti bayar, dan mengajukan komplain.
-
-### 2. Otomatisasi & Notifikasi
-* **Tagihan Otomatis:** Command terjadwal (`app:generate-monthly-invoices`) untuk membuat invoice bulanan masal.
-* **Notifikasi Cerdas:** Notifikasi via Database (Lonceng Dashboard) dan integrasi WhatsApp Channel untuk tagihan/pembayaran.
-
-### 3. Keamanan & Integritas
-* **Role-Based Access Control (RBAC):** Isolasi ketat antara data Admin, Teknisi, dan Klien.
-* **Audit Log:** Mencatat setiap aktivitas penting admin (Spatie Activitylog).
-* **Validasi Ketat:** Form Request terpisah, Rate Limiting pada login, dan proteksi Mass Assignment.
-
-### 4. Reporting
-* **PDF Export:** Laporan pendapatan keuangan bulanan siap cetak (DomPDF).
-* **Grafik Real-time:** Visualisasi tren pendapatan tahunan.
+## 1. 🛠️ Tech Stack & Versi
+Penting untuk maintenance di masa depan.
+* **Framework:** Laravel 10.x / 11.x
+* **Frontend:** React 18 + Inertia.js 2.0
+* **CSS:** Tailwind CSS + Headless UI
+* **Database:** PostgreSQL (Production/Local)
+* **PDF Engine:** barryvdh/laravel-dompdf
+* **Runtime:** PHP 8.2+, Node.js 18+
 
 ---
 
-## 🛠️ Teknologi (Tech Stack)
+## 2. 🏗️ Arsitektur & Struktur Kode
 
-* **Backend:** Laravel 10 (PHP 8.1+)
-* **Frontend:** React 18, Inertia.js 2.0
-* **Styling:** Tailwind CSS, Headless UI
-* **Database:** MySQL / PostgreSQL
-* **Authentication:** Laravel Breeze, Laravel Sanctum, Socialite (Google Login)
-* **Utilities:** Spatie Activitylog, DomPDF, Chart.js
+Aplikasi menggunakan pola **Monolith MVC** dengan pemisahan folder Controller berdasarkan **Role**.
 
----
+### Peta Controller (`app/Http/Controllers/`)
+* **`Admin/`**: Logika untuk Administrator (CRUD Master Data, Verifikasi, Laporan).
+* **`Client/`**: Logika untuk Pelanggan (Lihat Tagihan, Upload Bukti, Komplain).
+* **`Teknisi/`**: Logika untuk Pekerja Lapangan (Absensi, Tugas, Alat).
+* **`Auth/`**: Logika Login/Register (termasuk pemisahan Login Admin & User Biasa).
+* **`DashboardController.php`**: *Single Point of Entry* untuk mengarahkan user ke dashboard yang sesuai role-nya.
 
-## ⚙️ Panduan Instalasi (Local Development)
-
-Ikuti langkah ini untuk menjalankan proyek di komputer lokal Anda.
-
-### Prasyarat
-* PHP >= 8.1
-* Composer
-* Node.js & NPM
-* MySQL / MariaDB
-
-### Langkah-langkah
-
-1.  **Kloning Repositori**
-    ```bash
-    git clone [https://github.com/FrengkiSimatupang17/Filltech-Project.git](https://github.com/FrengkiSimatupang17/Filltech-Project.git)
-    cd Filltech-Project
-    ```
-
-2.  **Instal Dependensi Backend**
-    ```bash
-    composer install
-    ```
-
-3.  **Konfigurasi Environment**
-    Duplikasi file `.env.example` menjadi `.env`:
-    ```bash
-    cp .env.example .env
-    php artisan key:generate
-    ```
-    *Buka file `.env` dan sesuaikan konfigurasi Database (`DB_DATABASE`, `DB_USERNAME`, dll).*
-
-4.  **Migrasi & Seeding Database**
-    Ini akan membuat tabel dan mengisi data akun default (Admin, Teknisi, Paket Internet).
-    ```bash
-    php artisan migrate --seed
-    ```
-
-5.  **Instal Dependensi Frontend**
-    ```bash
-    npm install
-    npm run build
-    ```
-
-6.  **Jalankan Aplikasi**
-    Buka dua terminal terpisah:
-    * Terminal 1 (Laravel Server):
-        ```bash
-        php artisan serve
-        ```
-    * Terminal 2 (Vite Development - Opsional jika sudah build):
-        ```bash
-        npm run dev
-        ```
-
-Akses aplikasi di: `http://127.0.0.1:8000`
+### Middleware Khusus
+* **`RequireClockIn`**: Mencegah teknisi mengakses menu Tugas/Alat jika belum melakukan Clock-In hari ini.
+* **`SecurityHeaders`**: Mengatur CSP dan header keamanan (Mode Strict di Production, Longgar di Local).
 
 ---
 
-## 👤 Akun Default (Seeder)
+## 3. 🧠 Logika Bisnis Utama (Core Business Logic)
 
-Gunakan akun berikut untuk masuk dan menguji fitur:
+Bagian ini menjelaskan alur kompleks yang terjadi di balik layar.
 
-| Role | Email | Password | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@filltech.com` | `password` | Akses penuh sistem & laporan. |
-| **Teknisi** | `budi@filltech.com` | `password` | Akses tugas & logistik. |
-| **Client** | `siska@client.com` | `password` | Simulasi pelanggan. |
+### A. Alur Pendaftaran & Langganan
+1.  Client Register -> Masuk ke `users` (Role: client).
+2.  Client pilih paket di `/subscribe` -> Masuk ke tabel `subscriptions` (Status: `pending`).
+3.  Notifikasi sistem dikirim ke Admin.
+
+### B. Alur Verifikasi Pembayaran (Automated Chain)
+Logic ini ada di `PaymentVerificationController@approvePayment`.
+Ketika Admin klik **"Terima"**, sistem melakukan **Database Transaction** yang memicu 5 hal sekaligus:
+1.  Update `payments.status` -> `verified`.
+2.  Update `invoices.status` -> `paid`.
+3.  Jika ini pembayaran instalasi -> Update `subscriptions.status` -> `active`.
+4.  **Auto-Create Task:** Membuat tugas `installation` baru untuk teknisi (Status: `assigned`, Priority: `high`).
+5.  Kirim Notifikasi WA ke Client.
+
+### C. Automasi Tagihan Bulanan
+* **File:** `app/Console/Commands/GenerateMonthlyInvoices.php`
+* **Jadwal:** Berjalan setiap tanggal 1 pukul 01:00 (via Scheduler).
+* **Logic:** Mencari semua `Subscription` aktif, lalu membuat `Invoice` tipe `monthly` untuk bulan berjalan. Menggunakan `chunk(100)` untuk hemat memori.
+
+### D. Absensi Teknisi
+* Teknisi **WAJIB** Clock-In untuk membuka menu lain.
+* Keterlambatan dihitung otomatis di Model `Attendance` (Accessor `is_late`) jika Clock-In > 08:00 WIB.
 
 ---
 
-## ⏰ Penjadwalan (Task Scheduling)
+## 4. 🚀 Deployment Cheat Sheet (Railway)
 
-Untuk menjalankan fitur **Tagihan Otomatis** di server lokal tanpa cron job asli, jalankan perintah:
+Panduan cepat jika harus deploy ulang atau pindah server.
 
-```bash
-php artisan schedule:work
+### Environment Variables (Production)
+Pastikan variabel ini ada di Railway:
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=[https://domain-anda-di-railway.app](https://domain-anda-di-railway.app)
+DB_CONNECTION=pgsql
+# ... (Kredensial DB dari Railway Reference) ...
