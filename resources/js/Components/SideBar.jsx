@@ -1,10 +1,10 @@
 import { Link } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import SideBarLink from '@/Components/SideBarLink';
+
 import { 
     HomeIcon, 
-    UserGroupIcon, 
-    WifiIcon,
+    WifiIcon, 
     ChartBarIcon,
     CreditCardIcon,
     BookmarkIcon,
@@ -15,9 +15,7 @@ import {
     ClipboardDocumentListIcon,
     ClockIcon,
     WrenchScrewdriverIcon,
-    UserIcon,
-    ArrowLeftOnRectangleIcon,
-    UserCircleIcon
+    UserIcon
 } from '@heroicons/react/24/outline';
 
 export default function SideBar({ user }) {
@@ -34,7 +32,6 @@ export default function SideBar({ user }) {
         { label: 'MANAJEMEN USER' },
         { name: 'Klien', route: 'admin.clients.index', icon: UserIcon }, 
         { name: 'Teknisi', route: 'admin.technicians.index', icon: WrenchScrewdriverIcon },
-        { name: 'Absensi', route: 'admin.attendance.report.index', icon: ClockIcon }, // <-- PERBAIKAN DISINI (tambah admin.)
         
         { label: 'SYSTEM' },
         { name: 'Activity Log', route: 'admin.activity-log.index', icon: DocumentTextIcon },
@@ -56,11 +53,12 @@ export default function SideBar({ user }) {
 
     let navLinks = [];
     if (user.role === 'administrator') navLinks = adminLinks;
-    else if (user.role === 'client') navLinks = clientLinks;
-    else if (user.role === 'teknisi') navLinks = teknisiLinks;
+    if (user.role === 'client') navLinks = clientLinks;
+    if (user.role === 'teknisi') navLinks = teknisiLinks;
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-900 text-white border-r border-gray-800">
+            
             <div className="flex items-center justify-center h-16 flex-shrink-0 border-b border-gray-800 bg-gray-900">
                 <Link href={route('dashboard')} className="flex items-center gap-3">
                     <ApplicationLogo className="block h-8 w-auto text-blue-500 fill-current" />
@@ -85,28 +83,6 @@ export default function SideBar({ user }) {
                         </SideBarLink>
                     )
                 ))}
-            </div>
-
-            <div className="p-4 border-t border-gray-800 bg-gray-900">
-                <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold shadow-sm">
-                        {user.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                        <p className="text-xs text-gray-400 truncate capitalize">{user.role}</p>
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Link href={route('profile.edit')} className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-800 hover:text-white transition-colors">
-                        <UserCircleIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-white" />
-                        Pengaturan Profil
-                    </Link>
-                    <Link href={route('logout')} method="post" as="button" className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors">
-                        <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-red-500" />
-                        Log Out
-                    </Link>
-                </div>
             </div>
         </div>
     );

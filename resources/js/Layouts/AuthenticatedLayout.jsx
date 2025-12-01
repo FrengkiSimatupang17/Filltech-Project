@@ -1,6 +1,13 @@
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage, router } from '@inertiajs/react';
-import { Bars3Icon, BellIcon } from '@heroicons/react/24/outline';
+import { 
+    Bars3Icon, 
+    BellIcon, 
+    CheckCircleIcon, 
+    ExclamationCircleIcon, 
+    BanknotesIcon, 
+    InformationCircleIcon 
+} from '@heroicons/react/24/outline';
 import SideBar from '@/Components/SideBar';
 import { useEffect, useState } from 'react';
 
@@ -18,7 +25,7 @@ function FlashMessage({ flash }) {
 
     return (
         <div className="toast toast-top toast-center z-50">
-            <div className={`alert ${type} shadow-lg text-white font-medium`}>
+            <div className={`alert ${type} shadow-lg text-white font-medium flex items-center gap-2`}>
                 <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     className="stroke-current shrink-0 h-6 w-6" 
@@ -52,17 +59,27 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     const handleNotificationClick = (notifId, url) => {
         router.post(route('notifications.read', notifId), {}, {
-            onSuccess: () => {
-                window.location.href = url;
-            },
-            onError: () => {
-                window.location.href = url;
-            }
+            onSuccess: () => window.location.href = url,
+            onError: () => window.location.href = url
         });
     };
 
+    // Helper untuk menentukan ikon berdasarkan tipe notifikasi
+    const getNotificationIcon = (type) => {
+        switch (type) {
+            case 'payment_verified':
+                return <CheckCircleIcon className="w-6 h-6 text-green-500" />;
+            case 'invoice':
+                return <BanknotesIcon className="w-6 h-6 text-blue-500" />;
+            case 'alert':
+                return <ExclamationCircleIcon className="w-6 h-6 text-red-500" />;
+            default:
+                return <InformationCircleIcon className="w-6 h-6 text-gray-400" />;
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-50">
             
             {showFlash && <FlashMessage flash={flash} />}
 
@@ -72,76 +89,94 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 
                 <div className="drawer-content flex flex-col min-h-screen">
                     
-                    <nav className="bg-white border-b border-gray-100 sticky top-0 w-full z-30 h-16">
+                    {/* Navbar */}
+                    <nav className="bg-white border-b border-gray-200 sticky top-0 w-full z-30 h-16 shadow-sm">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
                             <div className="flex justify-between items-center h-full">
                                 
+                                {/* Sidebar Toggle & Logo */}
                                 <div className="flex items-center gap-3">
-                                    <label htmlFor="my-drawer" className="btn btn-ghost lg:hidden mr-2 p-2">
+                                    <label htmlFor="my-drawer" className="btn btn-ghost btn-circle btn-sm lg:hidden text-gray-600">
                                         <Bars3Icon className="h-6 w-6" />
                                     </label>
                                     <div className="shrink-0 flex items-center">
-                                        <Link href="/">
-                                            <span className="text-xl font-bold text-gray-800">Filltech</span>
+                                        <Link href="/" className="text-xl font-bold text-blue-700 tracking-tight hover:opacity-80 transition">
+                                            Filltech
                                         </Link>
                                     </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-4">
+                                {/* Right Side Icons */}
+                                <div className="flex items-center gap-2 sm:gap-4">
                                     
-                                    <div className="ml-3 relative">
-                                        <Dropdown width="60">
+                                    {/* --- Notification Dropdown --- */}
+                                    <div className="relative">
+                                        <Dropdown width="80">
                                             <Dropdown.Trigger>
-                                                <button 
-                                                    className="btn btn-ghost btn-circle btn-sm text-gray-400 hover:text-blue-600 relative"
-                                                    aria-label="Notifikasi"
-                                                >
+                                                <button className="btn btn-ghost btn-circle btn-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 relative transition-colors">
                                                     <BellIcon className="h-6 w-6" />
                                                     {unreadCount > 0 && (
-                                                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
-                                                            {unreadCount}
+                                                        <span className="absolute top-0.5 right-0.5 flex h-3 w-3">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                                         </span>
                                                     )}
                                                 </button>
                                             </Dropdown.Trigger>
                                             
-                                            <Dropdown.Content align="right" width="80">
-                                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                                                    <span className="text-sm font-semibold text-gray-700">Notifikasi ({unreadCount} Belum Dibaca)</span>
+                                            <Dropdown.Content align="right" width="96">
+                                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                                    <span className="text-sm font-bold text-gray-700">Notifikasi</span>
+                                                    {unreadCount > 0 && (
+                                                        <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                                            {unreadCount} Baru
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <div className="max-h-64 overflow-y-auto">
+
+                                                <div className="max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
                                                     {notifications.length === 0 ? (
-                                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                                                            Tidak ada notifikasi baru.
+                                                        <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                                                            <div className="bg-gray-100 p-3 rounded-full mb-3">
+                                                                <BellIcon className="w-6 h-6 text-gray-400" />
+                                                            </div>
+                                                            <p className="text-sm text-gray-500 font-medium">Tidak ada notifikasi baru</p>
+                                                            <p className="text-xs text-gray-400 mt-1">Kami akan memberi tahu Anda jika ada pembaruan.</p>
                                                         </div>
                                                     ) : (
                                                         notifications.map((notif) => (
-                                                            <div key={notif.id}>
-                                                                <button 
-                                                                    onClick={() => handleNotificationClick(notif.id, notif.data.url)}
-                                                                    className={`block w-full text-left px-4 py-3 text-sm leading-5 text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${!notif.read_at ? 'bg-blue-50/70' : 'bg-white'}`}
-                                                                >
-                                                                    <div className="flex items-start gap-2">
-                                                                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read_at ? 'bg-red-500' : 'bg-gray-300'}`}></div>
-                                                                        <div>
-                                                                            <p className="font-medium text-gray-800">{notif.data.message}</p>
-                                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                                {new Date(notif.created_at).toLocaleString('id-ID')}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </button>
-                                                            </div>
+                                                            <button
+                                                                key={notif.id}
+                                                                onClick={() => handleNotificationClick(notif.id, notif.data.url)}
+                                                                className={`w-full text-left px-4 py-4 border-b border-gray-50 transition-all duration-200 flex items-start gap-4 hover:bg-gray-50 group ${
+                                                                    !notif.read_at ? 'bg-blue-50/60' : 'bg-white'
+                                                                }`}
+                                                            >
+                                                                {/* Icon Container */}
+                                                                <div className={`flex-shrink-0 p-2 rounded-full ${!notif.read_at ? 'bg-white shadow-sm' : 'bg-gray-100'}`}>
+                                                                    {getNotificationIcon(notif.data.type)}
+                                                                </div>
+
+                                                                {/* Content */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className={`text-sm leading-snug ${!notif.read_at ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                                                                        {notif.data.message}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                                                        {new Date(notif.created_at).toLocaleString('id-ID', { 
+                                                                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Unread Indicator Dot */}
+                                                                {!notif.read_at && (
+                                                                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0 animate-pulse"></div>
+                                                                )}
+                                                            </button>
                                                         ))
                                                     )}
-                                                </div>
-                                                <div className="border-t p-2">
-                                                    <Link 
-                                                        href={route('notifications.index')} 
-                                                        className="block text-center text-sm text-blue-600 hover:text-blue-700"
-                                                    >
-                                                        Lihat Semua
-                                                    </Link>
                                                 </div>
                                             </Dropdown.Content>
                                         </Dropdown>
@@ -149,28 +184,28 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
                                     <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
 
-                                    {/* User Dropdown */}
+                                    {/* --- User Dropdown --- */}
                                     <Dropdown>
                                         <Dropdown.Trigger>
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150"
-                                            >
-                                                <div className="text-right hidden sm:block">
-                                                    <div className="text-gray-800">{user.name}</div>
+                                            <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full border border-transparent hover:bg-gray-100 transition-colors focus:outline-none group">
+                                                <div className="text-right hidden sm:block leading-tight mr-1">
+                                                    <div className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition">{user.name}</div>
+                                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{user.role}</div>
                                                 </div>
-                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200 ml-2">
+                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white">
                                                     {user.name.charAt(0)}
                                                 </div>
-                                                <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
                                             </button>
                                         </Dropdown.Trigger>
                                         
                                         <Dropdown.Content>
-                                            <div className="px-4 py-2 text-xs text-gray-400 border-b">Kelola Akun</div>
-                                            <Dropdown.Link href={route('profile.edit')}>Profil Saya</Dropdown.Link>
+                                            <div className="px-4 py-2.5 text-xs font-bold text-gray-400 uppercase tracking-wider border-b bg-gray-50">
+                                                Pengaturan Akun
+                                            </div>
+                                            <Dropdown.Link href={route('profile.edit')}>
+                                                Profil Saya
+                                            </Dropdown.Link>
+                                            <div className="border-t border-gray-100 my-1"></div>
                                             <Dropdown.Link href={route('logout')} method="post" as="button" className="text-red-600 hover:bg-red-50">
                                                 Log Out
                                             </Dropdown.Link>
@@ -181,27 +216,25 @@ export default function AuthenticatedLayout({ user, header, children }) {
                         </div>
                     </nav>
                     
-                    {/* Page Heading (Header) */}
+                    {/* Page Header */}
                     {header && (
-                        <header className="bg-white shadow-sm border-b border-gray-100 pt-16 sm:pt-0"> 
-                            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        <header className="bg-white shadow-sm border-b border-gray-100 pt-6 pb-6">
+                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 {header}
                             </div>
                         </header>
                     )}
                     
-                    {/* Page Content (Children) */}
-                    <main className="flex-1 bg-gray-50 p-4 sm:p-6 lg:p-8">{children}</main>
+                    {/* Page Content */}
+                    <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+                        {children}
+                    </main>
                 </div> 
                 
                 {/* Sidebar Drawer */}
                 <div className="drawer-side z-40 sm:z-auto">
-                    <label 
-                        htmlFor="my-drawer" 
-                        aria-label="close sidebar" 
-                        className="drawer-overlay sm:hidden"
-                    ></label>
-                    <div className="w-64 min-h-full">
+                    <label htmlFor="my-drawer" className="drawer-overlay sm:hidden"></label>
+                    <div className="w-64 min-h-full bg-gray-900 text-white shadow-xl">
                         <SideBar user={user} />
                     </div>
                 </div>
