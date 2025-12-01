@@ -38,7 +38,8 @@ class EquipmentLogController extends Controller
                 'id' => $log->id,
                 'equipment_name' => $log->equipment->name,
                 'serial_number' => $log->equipment->serial_number,
-                'borrowed_at' => $log->borrowed_at->translatedFormat('d M Y, H:i'),
+                // PERBAIKAN: Konversi ke WIB
+                'borrowed_at' => $log->borrowed_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
             ]);
 
         $myHistory = EquipmentLog::with('equipment')
@@ -51,8 +52,9 @@ class EquipmentLogController extends Controller
                 'id' => $log->id,
                 'equipment_name' => $log->equipment->name,
                 'serial_number' => $log->equipment->serial_number,
-                'borrowed_at' => $log->borrowed_at->translatedFormat('d M Y, H:i'),
-                'returned_at' => $log->returned_at->translatedFormat('d M Y, H:i'),
+                // PERBAIKAN: Konversi ke WIB
+                'borrowed_at' => $log->borrowed_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
+                'returned_at' => $log->returned_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
             ]);
 
         return Inertia::render('Teknisi/Equipment/Index', [

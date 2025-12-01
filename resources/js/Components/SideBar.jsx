@@ -34,6 +34,7 @@ export default function SideBar({ user }) {
         { label: 'MANAJEMEN USER' },
         { name: 'Klien', route: 'admin.clients.index', icon: UserIcon }, 
         { name: 'Teknisi', route: 'admin.technicians.index', icon: WrenchScrewdriverIcon },
+        { name: 'Absensi', route: 'admin.attendance.report.index', icon: ClockIcon }, // <-- PERBAIKAN DISINI (tambah admin.)
         
         { label: 'SYSTEM' },
         { name: 'Activity Log', route: 'admin.activity-log.index', icon: DocumentTextIcon },

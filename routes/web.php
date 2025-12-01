@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AdminAttendanceController; // Controller Baru Diimport
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
@@ -24,6 +25,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// --- PUBLIC ROUTES ---
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -34,8 +37,12 @@ Route::get('/', function () {
     ]);
 });
 
+// --- SOCIALITE AUTH ---
+
 Route::get('/auth/google/redirect', [SocialiteController::class, 'redirectToGoogle'])->name('socialite.google.redirect');
 Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCallback'])->name('socialite.google.callback');
+
+// --- AUTHENTICATED ROUTES ---
 
 Route::middleware(['auth', 'verified'])->group(function () {
     
@@ -72,26 +79,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('reports/export', [ReportController::class, 'exportPdf'])->name('reports.export');
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         
+        // Laporan Absensi (Fitur Baru)
+        Route::get('attendance-report', [AdminAttendanceController::class, 'index'])->name('attendance.report.index');
+        Route::get('attendance-report/export', [AdminAttendanceController::class, 'exportPdf'])->name('attendance.report.export');
+
         Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
     });
 
     // --- CLIENT ROUTES ---
     Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
-        
         Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
         Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
-        
         Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
-
         Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index');
         Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
     });
 
     // --- TEKNISI ROUTES ---
-Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
+    Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
         
-        // GROUP KHUSUS: WAJIB CLOCK-IN DULU (Mengamankan Akses Tugas dan Alat)
+        // GROUP KHUSUS: WAJIB CLOCK-IN DULU
         Route::middleware(['clock_in'])->group(function () {
             Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
             Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
@@ -101,7 +109,7 @@ Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->grou
             Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
         });
 
-        // ABSENSI (Dibiarkan bebas dari middleware 'clock_in' agar bisa absen)
+        // ABSENSI (Bebas akses agar bisa melakukan Clock-In)
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     });
