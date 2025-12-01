@@ -21,9 +21,25 @@ class NewInvoiceNotification extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class];
+        return ['database', WhatsAppChannel::class];
     }
 
+    /**
+     * Data yang akan disimpan ke tabel 'notifications' di database.
+     * Ini yang akan dibaca oleh Lonceng di Navbar.
+     */
+    public function toArray($notifiable): array
+    {
+        return [
+            'message' => 'Tagihan Baru #' . $this->invoice->invoice_number . ' sebesar Rp ' . number_format($this->invoice->amount, 0, ',', '.'),
+            'url' => route('client.invoices.index'),
+            'type' => 'invoice',
+        ];
+    }
+
+    /**
+     * Format pesan untuk WhatsApp (Channel Custom)
+     */
     public function toWhatsApp($notifiable): string
     {
         $amount = number_format($this->invoice->amount, 0, ',', '.');

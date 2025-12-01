@@ -21,15 +21,30 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class];
+        return ['database', WhatsAppChannel::class];
     }
 
+    /**
+     * Data yang disimpan ke database untuk ditampilkan di lonceng notifikasi.
+     */
+    public function toArray($notifiable): array
+    {
+        return [
+            'message' => 'Pembayaran LUNAS! Tagihan #' . $this->payment->invoice->invoice_number . ' telah diverifikasi.',
+            'url' => route('client.invoices.index'),
+            'type' => 'payment_verified',
+        ];
+    }
+
+    /**
+     * Pesan yang dikirim via WhatsApp.
+     */
     public function toWhatsApp($notifiable): string
     {
         $amount = number_format($this->payment->amount, 0, ',', '.');
 
         return "Halo {$notifiable->name},\nPembayaran Anda senilai Rp {$amount} "
              . "untuk tagihan #{$this->payment->invoice->invoice_number} telah BERHASIL diverifikasi. "
-             . "Terima kasih.";
+             . "Terima kasih telah berlangganan Filltech.";
     }
 }
