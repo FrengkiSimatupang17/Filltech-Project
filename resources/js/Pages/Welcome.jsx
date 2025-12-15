@@ -1,291 +1,530 @@
 import { Link, Head } from '@inertiajs/react';
-import { WifiIcon, BoltIcon, CurrencyDollarIcon, CheckCircleIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useRef } from 'react';
+import { 
+    WifiIcon, 
+    BoltIcon, 
+    CurrencyDollarIcon, 
+    CheckCircleIcon, 
+    PhoneIcon, 
+    MapPinIcon,
+    EnvelopeIcon,
+    Bars3Icon,
+    XMarkIcon,
+    ArrowRightIcon,
+    ServerIcon,
+    UserGroupIcon,
+    GlobeAsiaAustraliaIcon
+} from '@heroicons/react/24/outline';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
+// --- KOMPONEN UNTUK ANIMASI SCROLL (REVEAL) ---
+const Reveal = ({ children, delay = 0 }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.unobserve(entry.target);
+                }
+            },
+            { threshold: 0.1 }
+        );
+        if (ref.current) observer.observe(ref.current);
+        return () => { if (ref.current) observer.disconnect(); };
+    }, []);
+
+    return (
+        <div 
+            ref={ref} 
+            className={`transition-all duration-1000 ease-out transform ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+            style={{ transitionDelay: `${delay}ms` }}
+        >
+            {children}
+        </div>
+    );
+};
+
 export default function Welcome({ auth, packages }) {
-    
-    const scrollToPricing = () => {
-        const element = document.getElementById('pricing');
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToSection = (id) => {
+        setMobileMenuOpen(false);
+        const element = document.getElementById(id);
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const formatRupiah = (amount) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount);
-    };
-
-    // Structured Data untuk Local Business (ISP)
-    const structuredData = {
-        "@context": "https://schema.org",
-        "@type": "InternetServiceProvider",
-        "name": "PT. Filltech Berkah Bersama",
-        "url": "https://filltech.co.id",
-        "logo": "https://filltech.co.id/logo.png",
-        "description": "Penyedia layanan internet WiFi unlimited fiber optic terbaik di Batam.",
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Batam",
-            "addressRegion": "Kepulauan Riau",
-            "addressCountry": "ID"
-        },
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": "+62-812-3456-7890",
-            "contactType": "customer service"
-        },
-        "priceRange": "IDR 150.000 - IDR 520.000"
-    };
+    const formatRupiah = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
     return (
         <>
-            <Head>
-                <title>Internet WiFi Murah & Cepat di Batam</title>
-                <meta name="description" content="Pasang WiFi rumah dan bisnis unlimited tanpa FUP di Batam bersama Filltech. Harga mulai Rp 150rb, koneksi stabil fiber optic, gratis instalasi." />
-                <meta name="keywords" content="internet batam, pasang wifi batam, provider internet murah, fiber optic batam, filltech, internet unlimited tanpa fup" />
-                <link rel="canonical" href="https://filltech.co.id/" />
-
-                {/* Open Graph / Facebook / WhatsApp */}
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content="https://filltech.co.id/" />
-                <meta property="og:title" content="Internet Cepat, Hidup Lebih Berkah - Filltech Batam" />
-                <meta property="og:description" content="Solusi internet rumah unlimited tanpa FUP. Stabil, terjangkau, dan support 24/7." />
-                <meta property="og:image" content="https://filltech.co.id/images/og-banner.jpg" />
-
-                {/* Twitter Card */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content="Promo Pasang WiFi Murah Batam - Filltech" />
-                <meta name="twitter:description" content="Internet Fiber Optic Unlimited mulai 150rb/bulan. Cek paketnya sekarang!" />
-                <meta name="twitter:image" content="https://filltech.co.id/images/twitter-card.jpg" />
-
-                {/* JSON-LD Structured Data */}
-                <script type="application/ld+json">
-                    {JSON.stringify(structuredData)}
-                </script>
-            </Head>
+            <Head title="Internet Cepat & Berkah" />
             
-            <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+            <div className="min-h-screen bg-white font-sans text-slate-800 overflow-x-hidden selection:bg-blue-600 selection:text-white">
                 
-                {/* Header Navigation */}
-                <header className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm px-4 sm:px-8 h-16">
-                    <div className="flex justify-between items-center h-full">
-                        <div className="flex items-center">
-                            <Link href="/" className="flex items-center p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Beranda Filltech">
-                                <ApplicationLogo className="h-8 w-auto fill-current text-blue-600" aria-hidden="true" />
-                                <span className="ml-2 hidden sm:inline font-bold text-gray-800 text-xl">Filltech Berkah</span>
-                            </Link>
+                {/* --- NAVBAR --- */}
+                <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-3' : 'bg-transparent py-6'}`}>
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <ApplicationLogo className={`h-9 w-auto transition-colors ${isScrolled ? 'text-blue-700' : 'text-white'}`} />
+                            <span className={`text-xl font-extrabold tracking-tight ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
+                                Filltech<span className="text-blue-500">.Net</span>
+                            </span>
                         </div>
-                        <nav className="flex items-center gap-3" aria-label="Navigasi Utama">
+
+                        <div className="hidden md:flex items-center gap-8">
+                            {['Tentang', 'Keunggulan', 'Paket', 'Lokasi'].map((item) => (
+                                <button 
+                                    key={item} 
+                                    onClick={() => scrollToSection(item.toLowerCase())}
+                                    className={`text-sm font-semibold tracking-wide transition-colors hover:text-blue-500 ${isScrolled ? 'text-slate-600' : 'text-slate-200'}`}
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="hidden md:flex items-center gap-3">
                             {auth.user ? (
-                                <Link href={route('dashboard')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm shadow-md transition-colors">
+                                <Link href={route('dashboard')} className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/30">
                                     Dashboard
                                 </Link>
                             ) : (
                                 <>
-                                    <Link href={route('login')} className="px-4 py-2 text-gray-700 font-bold hover:bg-gray-100 hover:text-blue-600 rounded-lg text-sm transition-colors">
-                                        Log in
+                                    <Link href={route('login')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-colors ${isScrolled ? 'text-slate-700 hover:bg-slate-100' : 'text-white hover:bg-white/10'}`}>
+                                        Masuk
                                     </Link>
-                                    <Link href={route('register')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm shadow-md transition-colors">
-                                        Daftar Sekarang
+                                    <Link href={route('register')} className="px-6 py-2.5 rounded-full bg-white text-blue-900 hover:bg-blue-50 font-bold text-sm transition-all shadow-lg">
+                                        Daftar
                                     </Link>
                                 </>
                             )}
-                        </nav>
+                        </div>
+
+                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
+                            {mobileMenuOpen ? (
+                                <XMarkIcon className={`h-8 w-8 ${isScrolled ? 'text-slate-800' : 'text-white'}`} />
+                            ) : (
+                                <Bars3Icon className={`h-8 w-8 ${isScrolled ? 'text-slate-800' : 'text-white'}`} />
+                            )}
+                        </button>
                     </div>
-                </header>
 
-                <main>
-                    {/* Hero Section */}
-                    <section className="min-h-[85vh] bg-gradient-to-br from-blue-600 to-blue-900 text-white flex items-center pt-16" aria-label="Hero">
-                        <div className="w-full text-center p-6">
-                            <div className="max-w-3xl mx-auto">
-                                <div className="mb-6 inline-flex items-center justify-center px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-sm border border-white/30 shadow-lg">
-                                    <span className="px-2 py-0.5 bg-yellow-400 text-blue-900 font-bold rounded-full text-xs mr-2">BARU</span>
-                                    <span className="text-sm font-medium text-white">Jaringan Fiber Optic Terluas di Batam</span>
+                    {/* Mobile Menu */}
+                    <div className={`absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-xl transform transition-all duration-300 origin-top md:hidden ${mobileMenuOpen ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0 h-0'}`}>
+                        <div className="p-4 flex flex-col gap-4 text-center">
+                            {['Tentang', 'Keunggulan', 'Paket', 'Lokasi'].map((item) => (
+                                <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="text-slate-700 font-bold py-2">
+                                    {item}
+                                </button>
+                            ))}
+                            <hr className="border-gray-100" />
+                            {auth.user ? (
+                                <Link href={route('dashboard')} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">Dashboard</Link>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Link href={route('login')} className="py-3 text-slate-700 font-bold border border-gray-200 rounded-lg">Masuk</Link>
+                                    <Link href={route('register')} className="py-3 bg-blue-600 text-white font-bold rounded-lg">Daftar</Link>
                                 </div>
-                                
-                                <h1 className="text-5xl font-extrabold leading-tight sm:text-7xl mb-6 drop-shadow-md text-white">
-                                    Internet Cepat, <br/>
-                                    <span className="text-yellow-400">Hidup Lebih Berkah.</span>
-                                </h1>
-                                
-                                <p className="py-6 text-lg sm:text-xl text-blue-50 max-w-2xl mx-auto leading-relaxed">
-                                    Solusi internet WiFi unlimited tanpa FUP untuk rumah dan bisnis Anda. 
-                                    Stabil, terjangkau, dan didukung layanan teknisi profesional 24/7.
-                                </p>
-                                
-                                <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
-                                    <button onClick={scrollToPricing} className="px-8 py-3 bg-yellow-400 hover:bg-yellow-300 text-blue-900 rounded-lg text-lg shadow-xl font-bold transition-colors">
-                                        Lihat Paket WiFi
-                                    </button>
-                                    <Link href={route('register')} className="px-8 py-3 bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 rounded-lg text-lg font-bold transition-colors">
-                                        Pasang Sekarang
-                                    </Link>
+                            )}
+                        </div>
+                    </div>
+                </nav>
+
+                {/* --- HERO SECTION --- */}
+                <section className="relative h-[110vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+                    {/* Background Image (Abstract Network) */}
+                    <div className="absolute inset-0 z-0">
+                        <img 
+                            src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop" 
+                            alt="Background Network" 
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Overlay Gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-slate-900 z-10"></div>
+                    </div>
+
+                    <div className="container mx-auto px-4 relative z-20 text-center -mt-20">
+                        <Reveal>
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-blue-200 text-xs font-bold tracking-widest uppercase mb-8 backdrop-blur-sm">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Jaringan Fiber Optic No.1 Batam
+                            </div>
+                        </Reveal>
+                        
+                        <Reveal delay={100}>
+                            <h1 className="text-5xl sm:text-7xl font-black text-white tracking-tight mb-8 leading-tight drop-shadow-lg">
+                                Internet <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Tanpa Batas,</span><br />
+                                Kualitas Berkelas.
+                            </h1>
+                        </Reveal>
+                        
+                        <Reveal delay={200}>
+                            <p className="text-lg sm:text-2xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
+                                Solusi konektivitas fiber optic super cepat untuk rumah dan bisnis Anda. 
+                                Nikmati streaming 4K, gaming tanpa lag, dan bekerja tanpa batas kuota (True Unlimited).
+                            </p>
+                        </Reveal>
+                        
+                        <Reveal delay={300}>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+                                <button onClick={() => scrollToSection('paket')} className="w-full sm:w-auto px-10 py-5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3 group">
+                                    Lihat Paket <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                                <Link href={route('register')} className="w-full sm:w-auto px-10 py-5 bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold rounded-xl hover:bg-white/20 transition-all">
+                                    Hubungi Sales
+                                </Link>
+                            </div>
+                        </Reveal>
+                    </div>
+
+                    {/* Stats Strip */}
+                    <div className="absolute bottom-0 w-full bg-white/5 backdrop-blur-md border-t border-white/10 z-20 py-6 hidden md:block">
+                        <div className="container mx-auto px-4 flex justify-center gap-16 text-white">
+                            <div className="flex items-center gap-4">
+                                <ServerIcon className="w-10 h-10 text-blue-400" />
+                                <div>
+                                    <p className="text-2xl font-bold">99.9%</p>
+                                    <p className="text-xs text-slate-400 uppercase tracking-wider">Uptime SLA</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <UserGroupIcon className="w-10 h-10 text-emerald-400" />
+                                <div>
+                                    <p className="text-2xl font-bold">1000+</p>
+                                    <p className="text-xs text-slate-400 uppercase tracking-wider">Pelanggan Aktif</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <GlobeAsiaAustraliaIcon className="w-10 h-10 text-purple-400" />
+                                <div>
+                                    <p className="text-2xl font-bold">100%</p>
+                                    <p className="text-xs text-slate-400 uppercase tracking-wider">Fiber Optic</p>
                                 </div>
                             </div>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    {/* Features Section */}
-                    <section className="py-24 bg-gray-50" aria-label="Keunggulan Layanan">
-                        <div className="container mx-auto px-4">
-                            <div className="text-center mb-16">
-                                <h2 className="text-4xl font-bold mb-4 text-gray-900">Kenapa Memilih Filltech?</h2>
-                                <p className="text-gray-600 text-lg max-w-2xl mx-auto">Kami berkomitmen memberikan layanan terbaik dengan infrastruktur modern dan transparan.</p>
-                            </div>
+                {/* --- ABOUT SECTION (IMAGE + TEXT) --- */}
+                <section id="tentang" className="py-24 bg-white overflow-hidden">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex flex-col lg:flex-row items-center gap-16">
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <article className="bg-white rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 p-8 text-center">
-                                    <div className="p-4 bg-blue-100 rounded-full mb-4 mx-auto text-blue-600 w-fit" aria-hidden="true">
-                                        <BoltIcon className="h-10 w-10" />
+                            {/* Image Side */}
+                            <div className="w-full lg:w-1/2 relative">
+                                <Reveal>
+                                    <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-100">
+                                        <img 
+                                            src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=2070&auto=format&fit=crop" 
+                                            alt="Happy Family Internet" 
+                                            className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
+                                        />
+                                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-8">
+                                            <p className="text-white font-bold text-lg">Koneksi untuk Keluarga</p>
+                                            <p className="text-slate-300 text-sm">Menghubungkan kebahagiaan di rumah.</p>
+                                        </div>
                                     </div>
-                                    <h3 className="text-xl mb-2 text-gray-800 font-bold">Koneksi Super Cepat</h3>
-                                    <p className="text-gray-600">Nikmati streaming 4K, gaming tanpa lag, dan download cepat dengan jaringan fiber optic murni.</p>
-                                </article>
-                                
-                                <article className="bg-white rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 p-8 text-center">
-                                    <div className="p-4 bg-green-100 rounded-full mb-4 mx-auto text-green-600 w-fit" aria-hidden="true">
-                                        <CurrencyDollarIcon className="h-10 w-10" />
-                                    </div>
-                                    <h3 className="text-xl mb-2 text-gray-800 font-bold">Harga Transparan</h3>
-                                    <p className="text-gray-600">Tanpa biaya tersembunyi. Apa yang Anda lihat adalah apa yang Anda bayar setiap bulannya.</p>
-                                </article>
-                                
-                                <article className="bg-white rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 p-8 text-center">
-                                    <div className="p-4 bg-purple-100 rounded-full mb-4 mx-auto text-purple-600 w-fit" aria-hidden="true">
-                                        <WifiIcon className="h-10 w-10" />
-                                    </div>
-                                    <h3 className="text-xl mb-2 text-gray-800 font-bold">Unlimited Tanpa FUP</h3>
-                                    <p className="text-gray-600">Bebas internetan sepuasnya tanpa batasan kuota (Fair Usage Policy). Benar-benar unlimited.</p>
-                                </article>
+                                    {/* Decorative Dot Grid */}
+                                    <div className="absolute -z-10 -bottom-10 -right-10 w-40 h-40 bg-[url('/grid-pattern.svg')] opacity-20"></div>
+                                </Reveal>
                             </div>
+
+                            {/* Text Side */}
+                            <div className="w-full lg:w-1/2">
+                                <Reveal delay={200}>
+                                    <span className="text-blue-600 font-bold tracking-wider uppercase text-sm mb-2 block">Tentang Filltech</span>
+                                    <h2 className="text-4xl font-extrabold text-slate-900 mb-6 leading-tight">
+                                        Lebih Dari Sekadar <br/>Penyedia Internet.
+                                    </h2>
+                                    <p className="text-lg text-slate-600 mb-6 leading-relaxed">
+                                        PT. Filltech Berkah Bersama hadir menjawab kebutuhan masyarakat Batam akan internet yang stabil, cepat, dan terjangkau. 
+                                    </p>
+                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                        Kami menggunakan teknologi Fiber Optic terbaru yang tahan cuaca, minim gangguan, dan didukung oleh tim teknisi lokal yang siap siaga 24 jam. Visi kami sederhana: <strong>Internet Lancar, Hidup Berkah.</strong>
+                                    </p>
+                                    
+                                    <div className="flex flex-col gap-4">
+                                        {['Infrastruktur Milik Sendiri', 'Tim Support Lokal Batam', 'Harga Tetap Selamanya'].map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-3">
+                                                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                                    <CheckCircleIcon className="w-4 h-4" />
+                                                </div>
+                                                <span className="font-semibold text-slate-700">{item}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Reveal>
+                            </div>
+
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    {/* Pricing Section */}
-                    <section id="pricing" className="py-24 bg-white" aria-label="Daftar Harga Paket">
-                        <div className="container mx-auto px-4">
-                            <div className="text-center mb-16">
-                                <h2 className="text-4xl font-bold mb-4 text-gray-900">Pilih Paket Sesuai Kebutuhan</h2>
-                                <p className="text-gray-600 text-lg">Semua paket sudah termasuk modem WiFi dan instalasi gratis.</p>
-                            </div>
+                {/* --- FEATURES SECTION (CARDS) --- */}
+                <section id="keunggulan" className="py-24 bg-slate-50 relative">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="text-center max-w-3xl mx-auto mb-16">
+                            <Reveal>
+                                <h2 className="text-3xl font-bold text-slate-900 mb-4">Kenapa Memilih Filltech?</h2>
+                                <p className="text-slate-600">Kami fokus pada kualitas jaringan dan kepuasan pelanggan, bukan sekadar janji manis.</p>
+                            </Reveal>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <Reveal delay={100}>
+                                <div className="group p-8 rounded-3xl bg-white shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:-translate-y-2">
+                                    <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                                        <BoltIcon className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">Kecepatan Stabil</h3>
+                                    <p className="text-slate-600">Anti buffering saat jam sibuk. Jalur khusus yang kami optimasi untuk streaming dan meeting online.</p>
+                                </div>
+                            </Reveal>
+                            
+                            <Reveal delay={200}>
+                                <div className="group p-8 rounded-3xl bg-white shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:-translate-y-2">
+                                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                                        <CurrencyDollarIcon className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">Tanpa Biaya Tersembunyi</h3>
+                                    <p className="text-slate-600">Tagihan flat setiap bulan. Gratis biaya sewa modem dan gratis instalasi untuk pelanggan baru.</p>
+                                </div>
+                            </Reveal>
+                            
+                            <Reveal delay={300}>
+                                <div className="group p-8 rounded-3xl bg-white shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:-translate-y-2">
+                                    <div className="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-6 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
+                                        <WifiIcon className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">True Unlimited</h3>
+                                    <p className="text-slate-600">Download file bergiga-giga sepuasnya tanpa takut kecepatan diturunkan (No FUP).</p>
+                                </div>
+                            </Reveal>
+                        </div>
+                    </div>
+                </section>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center max-w-6xl mx-auto">
-                                {packages.map((pkg, index) => (
-                                    <article key={pkg.id} className={`bg-white shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col rounded-xl ${index === 1 ? 'border-4 border-blue-600 relative scale-105 z-10' : 'border border-gray-200'}`}>
-                                        
+                {/* --- PRICING SECTION --- */}
+                <section id="paket" className="py-24 bg-slate-900 relative overflow-hidden">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4b5563_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="text-center mb-16">
+                            <Reveal>
+                                <span className="text-blue-400 font-bold tracking-widest text-sm uppercase">Pilihan Paket</span>
+                                <h2 className="text-4xl font-bold text-white mt-2">Investasi Terbaik untuk Produktivitas</h2>
+                            </Reveal>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                            {packages.map((pkg, index) => (
+                                <Reveal key={pkg.id} delay={index * 100}>
+                                    <div className={`relative rounded-3xl p-8 flex flex-col transition-all duration-300 h-full ${
+                                        index === 1 
+                                            ? 'bg-gradient-to-b from-blue-600 to-blue-800 shadow-2xl shadow-blue-900/50 transform md:-translate-y-4 border border-blue-400' 
+                                            : 'bg-slate-800 border border-slate-700 hover:bg-slate-750'
+                                    }`}>
                                         {index === 1 && (
-                                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                <div className="bg-blue-600 border-none px-4 py-1.5 font-bold tracking-wide shadow-md text-white uppercase rounded-full">Paling Laris</div>
+                                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg tracking-wide uppercase">
+                                                Best Seller
                                             </div>
                                         )}
 
-                                        <div className="p-8 flex-grow">
-                                            <h3 className="text-2xl font-bold text-center text-gray-800 mb-2">{pkg.name}</h3>
-                                            <div className="text-center mb-8 pt-4 border-t border-gray-100">
-                                                <span className="text-4xl font-extrabold text-blue-600">
-                                                    {formatRupiah(pkg.price)}
-                                                </span>
-                                                <div className="text-sm font-medium text-gray-500 mt-1">/ bulan</div>
-                                            </div>
-                                            
-                                            <ul className="space-y-4 mb-8 flex-grow" aria-label={`Fitur paket ${pkg.name}`}>
-                                                <li className="flex items-center gap-3 text-gray-700">
-                                                    <CheckCircleIcon className="h-6 w-6 text-blue-600 flex-shrink-0" aria-hidden="true" />
-                                                    <span className="font-bold text-lg">Kecepatan {pkg.speed}</span>
-                                                </li>
-                                                <li className="flex items-center gap-3 text-gray-600">
-                                                    <CheckCircleIcon className="h-5 w-5 text-green-500 flex-shrink-0" aria-hidden="true" />
-                                                    <span>Unlimited Quota</span>
-                                                </li>
-                                                <li className="flex items-center gap-3 text-gray-600">
-                                                    <CheckCircleIcon className="h-5 w-5 text-green-500 flex-shrink-0" aria-hidden="true" />
-                                                    <span className="text-sm leading-tight">{pkg.description}</span>
-                                                </li>
-                                                <li className="flex items-center gap-3 text-gray-600">
-                                                    <CheckCircleIcon className="h-5 w-5 text-green-500 flex-shrink-0" aria-hidden="true" />
-                                                    <span>Support 24/7</span>
-                                                </li>
-                                            </ul>
+                                        <div className="mb-6">
+                                            <h3 className="text-2xl font-bold text-white">{pkg.name}</h3>
+                                            <p className={`text-sm mt-2 ${index === 1 ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                {pkg.description || 'Pilihan tepat untuk aktivitas digital Anda'}
+                                            </p>
+                                        </div>
 
-                                            <div className="mt-auto pt-4">
-                                                <Link 
-                                                    href={auth.user ? route('client.subscribe.index') : route('register')} 
-                                                    className={`w-full py-3 rounded-lg text-lg font-bold shadow-md transition-colors flex justify-center ${index === 1 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/50' : 'bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'}`}
-                                                    aria-label={`Pilih paket ${pkg.name}`}
-                                                >
-                                                    Pilih Paket Ini
-                                                </Link>
+                                        <div className="mb-8 pb-8 border-b border-white/10">
+                                            <div className="flex items-baseline">
+                                                <span className="text-4xl font-bold text-white">{formatRupiah(pkg.price)}</span>
+                                                <span className={`text-sm ml-2 ${index === 1 ? 'text-blue-200' : 'text-slate-500'}`}>/bln</span>
                                             </div>
                                         </div>
-                                    </article>
-                                ))}
+
+                                        <ul className="space-y-4 mb-8 flex-1">
+                                            <li className="flex items-center gap-3">
+                                                <div className={`p-1 rounded-full ${index === 1 ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                                                    <CheckCircleIcon className="w-4 h-4 text-white" />
+                                                </div>
+                                                <span className="font-bold text-white">Speed {pkg.speed}</span>
+                                            </li>
+                                            {['Unlimited Quota (No FUP)', 'Gratis Modem WiFi', 'Support Prioritas'].map((feat, i) => (
+                                                <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
+                                                    <CheckCircleIcon className={`w-5 h-5 ${index === 1 ? 'text-blue-300' : 'text-slate-600'}`} />
+                                                    <span>{feat}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        <Link 
+                                            href={auth.user ? route('client.subscribe.index') : route('register')} 
+                                            className={`w-full py-4 rounded-xl font-bold text-center transition-all shadow-lg ${
+                                                index === 1 
+                                                    ? 'bg-white text-blue-700 hover:bg-blue-50' 
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                            }`}
+                                        >
+                                            {index === 1 ? 'Pilih Paket Ini' : 'Berlangganan'}
+                                        </Link>
+                                    </div>
+                                </Reveal>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* --- CONTACT & LOCATION SECTION --- */}
+                <section id="lokasi" className="py-24 bg-white">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                            
+                            {/* Contact Info */}
+                            <Reveal>
+                                <div>
+                                    <span className="text-blue-600 font-bold tracking-wider uppercase text-sm mb-2 block">Hubungi Kami</span>
+                                    <h2 className="text-4xl font-bold text-slate-900 mb-6">Jangan Ragu Bertanya</h2>
+                                    <p className="text-slate-600 text-lg mb-8">
+                                        Tim teknis dan layanan pelanggan kami berbasis di Batam, siap membantu Anda menyelesaikan masalah koneksi dengan cepat.
+                                    </p>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-start gap-5 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                            <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
+                                                <MapPinIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-lg">Alamat Kantor</h4>
+                                                <p className="text-slate-600 mt-1 leading-relaxed">
+                                                    PJB III, BLOK AX 28, Sagulung Kota,<br/>
+                                                    Kec. Sagulung, Kota Batam,<br/>
+                                                    Kepulauan Riau 29425
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-5 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                            <div className="p-4 bg-emerald-100 text-emerald-600 rounded-xl">
+                                                <PhoneIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-lg">Layanan Pelanggan</h4>
+                                                <p className="text-slate-600 mt-1 font-mono text-lg">+62 812-3456-7890</p>
+                                                <p className="text-sm text-slate-400 mt-1">Senin - Minggu (08:00 - 22:00 WIB)</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-5 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                            <div className="p-4 bg-purple-100 text-purple-600 rounded-xl">
+                                                <EnvelopeIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-lg">Email</h4>
+                                                <p className="text-slate-600 mt-1">filltechberkahbersama@gmail.com</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Reveal>
+
+                            {/* Map */}
+                            <Reveal delay={200}>
+                                <div className="h-[500px] w-full bg-slate-100 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white relative group">
+<iframe 
+    src="https://maps.google.com/maps?q=PT.FILTECH%20BERKAH%20BERSAMA%20Batam&t=&z=15&ie=UTF8&iwloc=&output=embed"
+    width="100%" 
+    height="100%" 
+    style={{border:0}} 
+    allowFullScreen="" 
+    loading="lazy" 
+    referrerPolicy="no-referrer-when-downgrade"
+    title="Lokasi Filltech"
+    className="grayscale group-hover:grayscale-0 transition-all duration-500"
+></iframe>
+                                    <div className="absolute bottom-6 left-6 right-6 bg-white p-4 rounded-xl shadow-lg flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-slate-900">Kantor Pusat</p>
+                                            <p className="text-xs text-slate-500">Sagulung, Batam</p>
+                                        </div>
+                                        <a href="https://maps.google.com/?q=PT+Filltech+Berkah+Bersama" target="_blank" className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors">
+                                            Buka Maps
+                                        </a>
+                                    </div>
+                                </div>
+                            </Reveal>
+
+                        </div>
+                    </div>
+                </section>
+
+                {/* --- FOOTER --- */}
+                <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                            <div className="col-span-1 md:col-span-2">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <ApplicationLogo className="h-10 w-auto text-blue-600 fill-current" />
+                                    <span className="text-2xl font-bold text-white">Filltech<span className="text-blue-600">.Net</span></span>
+                                </div>
+                                <p className="max-w-sm text-slate-400 leading-relaxed mb-6">
+                                    Penyedia layanan internet fiber optic terpercaya di Batam. Fokus kami adalah kualitas jaringan yang stabil dan pelayanan yang memanusiakan pelanggan.
+                                </p>
+                                <div className="flex gap-4">
+                                    {/* Social Placeholders */}
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
+                                            <GlobeAsiaAustraliaIcon className="w-5 h-5" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">Navigasi</h4>
+                                <ul className="space-y-4 text-sm">
+                                    <li><button onClick={() => scrollToSection('tentang')} className="hover:text-blue-400 transition-colors">Tentang Kami</button></li>
+                                    <li><button onClick={() => scrollToSection('keunggulan')} className="hover:text-blue-400 transition-colors">Keunggulan</button></li>
+                                    <li><button onClick={() => scrollToSection('paket')} className="hover:text-blue-400 transition-colors">Daftar Paket</button></li>
+                                    <li><Link href={route('login')} className="hover:text-blue-400 transition-colors">Client Area</Link></li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">Bantuan</h4>
+                                <ul className="space-y-4 text-sm">
+                                    <li><a href="#" className="hover:text-blue-400 transition-colors">Cek Jangkauan</a></li>
+                                    <li><a href="#" className="hover:text-blue-400 transition-colors">Lapor Gangguan</a></li>
+                                    <li><a href="#" className="hover:text-blue-400 transition-colors">Syarat & Ketentuan</a></li>
+                                    <li><a href="#" className="hover:text-blue-400 transition-colors">Kebijakan Privasi</a></li>
+                                </ul>
                             </div>
                         </div>
-                    </section>
-
-                    {/* CTA Footer */}
-                    <section className="py-24 bg-blue-700 text-white relative overflow-hidden" aria-label="Ajakan Bertindak">
-                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
                         
-                        <div className="container mx-auto px-4 text-center relative z-10">
-                            <h2 className="text-4xl font-bold mb-6">Siap untuk Internet Lebih Baik?</h2>
-                            <p className="text-blue-100 mb-10 max-w-2xl mx-auto text-xl leading-relaxed">
-                                Bergabunglah dengan ribuan pelanggan puas lainnya di Batam. Pemasangan cepat, proses mudah, dan berkah.
-                            </p>
-                            <Link href={route('register')} className="px-8 py-3 bg-white text-blue-700 rounded-lg text-lg font-bold shadow-lg hover:bg-gray-100 hover:scale-105 transition-transform">
-                                Daftar & Pasang Sekarang
-                            </Link>
+                        <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+                            <div>© {new Date().getFullYear()} PT. Filltech Berkah Bersama.</div>
+                            <div className="text-slate-600">Designed with ❤️ in Batam.</div>
                         </div>
-                    </section>
-                </main>
+                    </div>
+                </footer>
 
-                <footer className="p-10 bg-gray-900 text-gray-300 grid grid-cols-1 md:grid-cols-4 gap-8" aria-label="Footer Situs">
-                    <aside className="col-span-1">
-                        <ApplicationLogo className="h-14 w-auto fill-current mb-2 text-blue-500" aria-hidden="true" />
-                        <p className="font-bold text-xl mt-2 text-white">
-                            PT. Filltech Berkah Bersama
-                        </p>
-                        <p className="text-gray-400 mt-1">Penyedia Layanan Internet Terpercaya.<br/>Memberikan koneksi terbaik untuk masa depan.</p>
-                    </aside> 
-                    <nav aria-label="Tautan Layanan">
-                        <header className="font-bold text-white opacity-100 text-lg mb-3">Layanan</header> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Internet Rumah</a> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Internet Bisnis</a> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Dedicated Server</a>
-                    </nav> 
-                    <nav aria-label="Tautan Perusahaan">
-                        <header className="font-bold text-white opacity-100 text-lg mb-3">Perusahaan</header> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Tentang Kami</a> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Kontak</a> 
-                        <a href="#" className="block link link-hover text-gray-400 hover:text-white mb-2">Karir</a>
-                    </nav> 
-                    <nav aria-label="Informasi Kontak">
-                        <header className="font-bold text-white opacity-100 text-lg mb-3">Hubungi Kami</header> 
-                        <div className="flex items-center gap-3 text-gray-300 mb-2">
-                            <PhoneIcon className="h-5 w-5 text-blue-500" aria-hidden="true" />
-                            <span>+62 812-3456-7890</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                            <span className="font-bold text-lg text-blue-500" aria-hidden="true">@</span>
-                            <span>support@filltech.com</span>
-                        </div>
-                    </nav>
-                </footer>
-                
-                <footer className="p-6 border-t bg-gray-900 text-gray-400 border-gray-800 text-sm flex justify-between items-center flex-wrap">
-                    <aside className="mb-2 md:mb-0">
-                        <p>© 2025 PT. Filltech Berkah Bersama. All rights reserved.</p>
-                    </aside>
-                    <nav className="flex gap-4" aria-label="Media Sosial">
-                        <a href="#" className="link link-hover hover:text-white">Twitter</a> 
-                        <a href="#" className="link link-hover hover:text-white">Facebook</a> 
-                    </nav>
-                </footer>
             </div>
         </>
     );

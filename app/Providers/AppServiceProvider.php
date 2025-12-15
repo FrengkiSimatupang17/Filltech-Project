@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Notification;
 use App\Channels\WhatsAppChannel;
+// use Illuminate\Support\Facades\URL; // Tidak perlu diimpor di lokal jika tidak dipakai
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,5 +40,7 @@ class AppServiceProvider extends ServiceProvider
         Notification::extend('whatsapp', function ($app) {
             return new WhatsAppChannel();
         });
+
+        // HAPUS LOGIKA FORCE HTTPS DI SINI UNTUK LOCALHOST
     }
 }

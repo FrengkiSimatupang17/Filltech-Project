@@ -12,27 +12,35 @@ class SecurityHeaders
     {
         $response = $next($request);
 
-        $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-XSS-Protection', '1; mode=block');
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        if (method_exists($response, 'header')) {
+            
+            $isLocal = app()->environment('local', 'testing');
 
-        // CSP Configuration
-        // Kita izinkan 'unsafe-inline' untuk style karena Vite/Tailwind membutuhkannya.
-        // Kita izinkan fonts.bunny.net untuk font.
-        // Kita izinkan data: dan blob: untuk gambar (preview upload).
-        
-        $csp = "default-src 'self'; " .
-               "script-src 'self' 'unsafe-inline' 'unsafe-eval' http: https:; " .
-               "style-src 'self' 'unsafe-inline' https://fonts.bunny.net; " .
-               "font-src 'self' data: https://fonts.bunny.net; " .
-               "img-src 'self' data: blob: https:; " .
-               "connect-src 'self' http: https: ws: wss:;";
+            // IZINKAN SEMUA SCRIPT DI LOKAL
+            $scriptSrc = $isLocal 
+                ? "* 'unsafe-inline' 'unsafe-eval'" 
+                : "'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com";
 
-        $response->headers->set('Content-Security-Policy', $csp);
+            // IZINKAN WS (WEBSOCKET) UNTUK VITE
+            $connectSrc = $isLocal
+                ? "* ws: wss:" 
+                : "'self' https://maps.googleapis.com";
 
-        if (app()->isProduction()) {
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            // PERBAIKAN UTAMA DI SINI (FRAME-SRC)
+            // Kita izinkan 'https:' secara global untuk frame agar map tidak diblokir
+            $csp = "default-src 'self'; " .
+                   "script-src $scriptSrc; " .
+                   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net; " .
+                   "img-src 'self' data: blob: https:; " . // Izinkan semua gambar HTTPS
+                   "font-src 'self' data: https://fonts.gstatic.com https://fonts.bunny.net; " .
+                   "connect-src $connectSrc; " .
+                   "frame-src 'self' https: http:;"; // <-- BOLEHKAN SEMUA IFRAME HTTPS/HTTP
+
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+            $response->headers->set('X-Content-Type-Options', 'nosniff');
+            $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+            $response->headers->set('Content-Security-Policy', $csp);
+            $response->headers->set('Permissions-Policy', 'geolocation=(self), microphone=()');
         }
 
         return $response;
