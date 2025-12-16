@@ -99,11 +99,6 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                     <label htmlFor="my-drawer" className="btn btn-ghost btn-circle btn-sm lg:hidden text-gray-600">
                                         <Bars3Icon className="h-6 w-6" />
                                     </label>
-                                    <div className="shrink-0 flex items-center">
-                                        <Link href="/" className="text-xl font-bold text-blue-700 tracking-tight hover:opacity-80 transition">
-                                            Filltech
-                                        </Link>
-                                    </div>
                                 </div>
                                 
                                 {/* Right Side Icons */}
