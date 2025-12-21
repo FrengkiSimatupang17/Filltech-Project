@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Notification;
 use App\Channels\WhatsAppChannel;
-// use Illuminate\Support\Facades\URL; // Tidak perlu diimpor di lokal jika tidak dipakai
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,25 +21,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 1. FAIL FAST: Validasi Environment Variables Vital
-        $requiredConfigs = [
-            'app.name',
-            'app.key',
-            'app.url',
-            'database.default',
-        ];
+        // CATATAN:
+        // Logika pemaksa HTTPS untuk Ngrok sudah DIHAPUS.
+        // Sekarang aplikasi berjalan normal di mode HTTP (Localhost).
 
-        foreach ($requiredConfigs as $key) {
-            if (empty(config($key))) {
-                throw new \RuntimeException("FATAL ERROR: Konfigurasi '{$key}' kosong. Pastikan file .env Anda sudah diisi dengan benar.");
-            }
-        }
-
-        // 2. Registrasi Custom Notification Channel (WhatsApp)
+        // 1. Registrasi Custom Notification Channel (WhatsApp)
         Notification::extend('whatsapp', function ($app) {
             return new WhatsAppChannel();
         });
-
-        // HAPUS LOGIKA FORCE HTTPS DI SINI UNTUK LOCALHOST
     }
 }

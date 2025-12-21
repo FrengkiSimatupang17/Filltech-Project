@@ -53,6 +53,15 @@ export default function Welcome({ auth, packages }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    // Data Paket Default (Jaga-jaga jika props packages kosong/undefined dari controller)
+    const defaultPackages = [
+        { id: 1, name: 'Basic', price: 150000, speed: '10 Mbps', description: 'Cocok untuk 1-3 perangkat' },
+        { id: 2, name: 'Family', price: 250000, speed: '20 Mbps', description: 'Best Seller untuk keluarga' },
+        { id: 3, name: 'Gamer', price: 350000, speed: '50 Mbps', description: 'Kecepatan maksimal tanpa lag' },
+    ];
+
+    const displayPackages = (packages && packages.length > 0) ? packages : defaultPackages;
+
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
@@ -78,8 +87,9 @@ export default function Welcome({ auth, packages }) {
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <ApplicationLogo className={`h-9 w-auto transition-colors ${isScrolled ? 'text-blue-700' : 'text-white'}`} />
-                            <span className={`text-xl font-extrabold tracking-tight ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
-                                Filltech<span className="text-blue-500">.Net</span>
+                            {/* PERUBAHAN NAMA BRAND DISINI */}
+                            <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
+                                Filltech Berkah Bersama
                             </span>
                         </div>
 
@@ -333,58 +343,58 @@ export default function Welcome({ auth, packages }) {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                            {packages.map((pkg, index) => (
+                            {displayPackages.map((pkg, index) => (
                                 <Reveal key={pkg.id} delay={index * 100}>
                                     <div className={`relative rounded-3xl p-8 flex flex-col transition-all duration-300 h-full ${
                                         index === 1 
                                             ? 'bg-gradient-to-b from-blue-600 to-blue-800 shadow-2xl shadow-blue-900/50 transform md:-translate-y-4 border border-blue-400' 
                                             : 'bg-slate-800 border border-slate-700 hover:bg-slate-750'
                                     }`}>
-                                        {index === 1 && (
-                                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg tracking-wide uppercase">
-                                                Best Seller
-                                            </div>
-                                        )}
-
-                                        <div className="mb-6">
-                                            <h3 className="text-2xl font-bold text-white">{pkg.name}</h3>
-                                            <p className={`text-sm mt-2 ${index === 1 ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                {pkg.description || 'Pilihan tepat untuk aktivitas digital Anda'}
-                                            </p>
-                                        </div>
-
-                                        <div className="mb-8 pb-8 border-b border-white/10">
-                                            <div className="flex items-baseline">
-                                                <span className="text-4xl font-bold text-white">{formatRupiah(pkg.price)}</span>
-                                                <span className={`text-sm ml-2 ${index === 1 ? 'text-blue-200' : 'text-slate-500'}`}>/bln</span>
-                                            </div>
-                                        </div>
-
-                                        <ul className="space-y-4 mb-8 flex-1">
-                                            <li className="flex items-center gap-3">
-                                                <div className={`p-1 rounded-full ${index === 1 ? 'bg-blue-500' : 'bg-slate-700'}`}>
-                                                    <CheckCircleIcon className="w-4 h-4 text-white" />
+                                            {index === 1 && (
+                                                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg tracking-wide uppercase">
+                                                    Best Seller
                                                 </div>
-                                                <span className="font-bold text-white">Speed {pkg.speed}</span>
-                                            </li>
-                                            {['Unlimited Quota (No FUP)', 'Gratis Modem WiFi', 'Support Prioritas'].map((feat, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                                                    <CheckCircleIcon className={`w-5 h-5 ${index === 1 ? 'text-blue-300' : 'text-slate-600'}`} />
-                                                    <span>{feat}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                            )}
 
-                                        <Link 
-                                            href={auth.user ? route('client.subscribe.index') : route('register')} 
-                                            className={`w-full py-4 rounded-xl font-bold text-center transition-all shadow-lg ${
-                                                index === 1 
-                                                    ? 'bg-white text-blue-700 hover:bg-blue-50' 
-                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                            }`}
-                                        >
-                                            {index === 1 ? 'Pilih Paket Ini' : 'Berlangganan'}
-                                        </Link>
+                                            <div className="mb-6">
+                                                <h3 className="text-2xl font-bold text-white">{pkg.name}</h3>
+                                                <p className={`text-sm mt-2 ${index === 1 ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                    {pkg.description || 'Pilihan tepat untuk aktivitas digital Anda'}
+                                                </p>
+                                            </div>
+
+                                            <div className="mb-8 pb-8 border-b border-white/10">
+                                                <div className="flex items-baseline">
+                                                    <span className="text-4xl font-bold text-white">{formatRupiah(pkg.price)}</span>
+                                                    <span className={`text-sm ml-2 ${index === 1 ? 'text-blue-200' : 'text-slate-500'}`}>/bln</span>
+                                                </div>
+                                            </div>
+
+                                            <ul className="space-y-4 mb-8 flex-1">
+                                                <li className="flex items-center gap-3">
+                                                    <div className={`p-1 rounded-full ${index === 1 ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                                                        <CheckCircleIcon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="font-bold text-white">Speed {pkg.speed}</span>
+                                                </li>
+                                                {['Unlimited Quota (No FUP)', 'Gratis Modem WiFi', 'Support Prioritas'].map((feat, i) => (
+                                                    <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
+                                                        <CheckCircleIcon className={`w-5 h-5 ${index === 1 ? 'text-blue-300' : 'text-slate-600'}`} />
+                                                        <span>{feat}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                            <Link 
+                                                href={auth.user ? route('client.subscribe.index') : route('register')} 
+                                                className={`w-full py-4 rounded-xl font-bold text-center transition-all shadow-lg ${
+                                                    index === 1 
+                                                        ? 'bg-white text-blue-700 hover:bg-blue-50' 
+                                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                }`}
+                                            >
+                                                {index === 1 ? 'Pilih Paket Ini' : 'Berlangganan'}
+                                            </Link>
                                     </div>
                                 </Reveal>
                             ))}
@@ -448,17 +458,17 @@ export default function Welcome({ auth, packages }) {
                             {/* Map */}
                             <Reveal delay={200}>
                                 <div className="h-[500px] w-full bg-slate-100 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white relative group">
-<iframe 
-    src="https://maps.google.com/maps?q=PT.FILTECH%20BERKAH%20BERSAMA%20Batam&t=&z=15&ie=UTF8&iwloc=&output=embed"
-    width="100%" 
-    height="100%" 
-    style={{border:0}} 
-    allowFullScreen="" 
-    loading="lazy" 
-    referrerPolicy="no-referrer-when-downgrade"
-    title="Lokasi Filltech"
-    className="grayscale group-hover:grayscale-0 transition-all duration-500"
-></iframe>
+                                    <iframe 
+                                        src="https://maps.google.com/maps?q=PT.FILTECH%20BERKAH%20BERSAMA%20Batam&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                                        width="100%" 
+                                        height="100%" 
+                                        style={{border:0}} 
+                                        allowFullScreen="" 
+                                        loading="lazy" 
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        title="Lokasi Filltech"
+                                        className="grayscale group-hover:grayscale-0 transition-all duration-500"
+                                    ></iframe>
                                     <div className="absolute bottom-6 left-6 right-6 bg-white p-4 rounded-xl shadow-lg flex items-center justify-between">
                                         <div>
                                             <p className="font-bold text-slate-900">Kantor Pusat</p>
@@ -482,7 +492,8 @@ export default function Welcome({ auth, packages }) {
                             <div className="col-span-1 md:col-span-2">
                                 <div className="flex items-center gap-3 mb-6">
                                     <ApplicationLogo className="h-10 w-auto text-blue-600 fill-current" />
-                                    <span className="text-2xl font-bold text-white">Filltech<span className="text-blue-600">.Net</span></span>
+                                    {/* PERUBAHAN NAMA BRAND DISINI */}
+                                    <span className="text-2xl font-bold text-white">Filltech Berkah Bersama</span>
                                 </div>
                                 <p className="max-w-sm text-slate-400 leading-relaxed mb-6">
                                     Penyedia layanan internet fiber optic terpercaya di Batam. Fokus kami adalah kualitas jaringan yang stabil dan pelayanan yang memanusiakan pelanggan.

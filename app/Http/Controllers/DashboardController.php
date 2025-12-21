@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\Task;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Models\Attendance;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -16,91 +19,115 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        // =========================================================================
+        // 1. LOGIKA DASHBOARD CLIENT (PELANGGAN)
+        // =========================================================================
         if ($user->role === 'client') {
-            $activeSubscription = \App\Models\Subscription::with('package')
+            
+            // Ambil langganan terakhir (aktif atau pending)
+            $subscription = Subscription::with('package')
                 ->where('user_id', $user->id)
-                ->where('status', 'active')
+                ->latest()
                 ->first();
 
+            // Ambil tagihan yang belum dibayar (status 'unpaid' ATAU 'overdue')
+            // Ini penting agar notifikasi merah muncul di dashboard client
             $unpaidInvoice = Invoice::where('user_id', $user->id)
-                ->where('status', 'unpaid')
+                ->whereIn('status', ['unpaid', 'overdue'])
                 ->latest()
                 ->first();
 
             return Inertia::render('Dashboard/ClientDashboard', [
-                'auth' => [
-                    'user' => $user,
-                ],
-                'subscription' => $activeSubscription,
+                'subscription' => $subscription,
                 'unpaid_invoice' => $unpaidInvoice,
+                'auth' => ['user' => $user], 
             ]);
         }
 
+        // =========================================================================
+        // 2. LOGIKA DASHBOARD TEKNISI
+        // =========================================================================
         if ($user->role === 'teknisi') {
             $teknisiId = $user->id;
-            
+
+            // Statistik Tugas
             $taskStats = [
-                'assigned' => \App\Models\Task::where('technician_user_id', $teknisiId)->where('status', 'assigned')->count(),
-                'in_progress' => \App\Models\Task::where('technician_user_id', $teknisiId)->where('status', 'in_progress')->count(),
-                'completed_today' => \App\Models\Task::where('technician_user_id', $teknisiId)
+                // Pastikan nama kolom di database sesuai ('technician_id' atau 'technician_user_id')
+                'assigned' => Task::where('technician_id', $teknisiId)->where('status', 'assigned')->count(),
+                'in_progress' => Task::where('technician_id', $teknisiId)->where('status', 'in_progress')->count(),
+                'completed_today' => Task::where('technician_id', $teknisiId)
                     ->where('status', 'completed')
-                    ->whereDate('completed_at', today())
+                    ->whereDate('updated_at', Carbon::today())
                     ->count(),
             ];
 
-            $todayAttendance = \App\Models\Attendance::where('technician_user_id', $teknisiId)
-                ->whereDate('clock_in', today())
+            // Cek Absensi Hari Ini
+            $todayAttendance = Attendance::where('technician_user_id', $teknisiId)
+                ->whereDate('clock_in', Carbon::today())
                 ->first();
-            
+
             $isClockedIn = $todayAttendance && !$todayAttendance->clock_out;
 
             return Inertia::render('Dashboard/TeknisiDashboard', [
                 'taskStats' => $taskStats,
-                'isClockedIn' => $isClockedIn,
                 'todayAttendance' => $todayAttendance ? [
-                    'clock_in' => $todayAttendance->clock_in->translatedFormat('H:i'),
-                    'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->translatedFormat('H:i') : null,
+                    'clock_in' => $todayAttendance->clock_in->timezone('Asia/Jakarta')->format('H:i'),
+                    'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->timezone('Asia/Jakarta')->format('H:i') : null,
                 ] : null,
+                'isClockedIn' => $isClockedIn,
             ]);
         }
 
-        // --- ADMINISTRATOR LOGIC ---
+        // =========================================================================
+        // 3. LOGIKA DASHBOARD ADMINISTRATOR (FULL STATS & CHART)
+        // =========================================================================
+        
+        // A. Statistik Kartu Atas
         $stats = [
+            'total_clients' => User::where('role', 'client')->count(),
             'pending_payments' => Payment::where('status', 'pending')->count(),
-            'pending_tasks' => 0, 
-            'new_clients_monthly' => User::where('role', 'client')
+            'active_subscriptions' => Subscription::where('status', 'active')->count(),
+            
+            // Pendapatan Bulan Ini (Hanya dari invoice lunas)
+            'monthly_revenue' => Invoice::where('status', 'paid')
                 ->whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year)
-                ->count(),
-            'monthly_revenue' => Invoice::where('status', 'paid')
-                ->whereMonth('paid_at', Carbon::now()->month)
-                ->whereYear('paid_at', Carbon::now()->year)
                 ->sum('amount'),
+                
+            // Klien Baru Bulan Ini
+            'new_clients_monthly' => User::where('role', 'client')
+                ->whereMonth('created_at', Carbon::now()->month)
+                ->count(),
         ];
 
-        $invoices = Invoice::select('amount', 'paid_at')
+        // B. Data Grafik Pendapatan Tahunan (Chart)
+        // Mengambil data invoice lunas tahun ini, dikelompokkan per bulan
+        $invoices = Invoice::select('amount', 'created_at')
             ->where('status', 'paid')
-            ->whereYear('paid_at', Carbon::now()->year)
+            ->whereYear('created_at', Carbon::now()->year)
             ->get();
 
         $grouped = $invoices->groupBy(function ($date) {
-            return (int) Carbon::parse($date->paid_at)->format('n');
+            return (int) Carbon::parse($date->created_at)->format('n'); // Group by bulan (1-12)
         });
 
         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
         $chartData = [];
 
+        // Loop 12 bulan agar grafik tetap utuh walau ada bulan kosong
         for ($i = 1; $i <= 12; $i++) {
             $total = isset($grouped[$i]) ? $grouped[$i]->sum('amount') : 0;
             $chartData[] = [
-                'month' => $monthNames[$i - 1],
-                'total' => $total
+                'name' => $monthNames[$i - 1], // Label Bulan
+                'total' => $total,             // Total Rupiah
             ];
         }
 
+        // Render ke Dashboard Admin
+        // Sesuai konfirmasi file Anda ada di: resources/js/Pages/Dashboard/AdminDashboard.jsx
         return Inertia::render('Dashboard/AdminDashboard', [
             'stats' => $stats,
-            'chart' => $chartData,
+            'chartData' => $chartData, 
         ]);
     }
 }
