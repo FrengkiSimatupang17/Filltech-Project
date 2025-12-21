@@ -24,16 +24,15 @@ class DashboardController extends Controller
         // =========================================================================
         if ($user->role === 'client') {
             
-            // Ambil langganan terakhir (aktif atau pending)
+            // Ambil langganan terakhir
             $subscription = Subscription::with('package')
                 ->where('user_id', $user->id)
                 ->latest()
                 ->first();
 
-            // Ambil tagihan yang belum dibayar (status 'unpaid' ATAU 'overdue')
-            // Ini penting agar notifikasi merah muncul di dashboard client
+            // Ambil tagihan yang belum dibayar
             $unpaidInvoice = Invoice::where('user_id', $user->id)
-                ->whereIn('status', ['unpaid', 'overdue'])
+                ->whereIn('status', ['unpaid', 'overdue','pending'])
                 ->latest()
                 ->first();
 
@@ -45,17 +44,17 @@ class DashboardController extends Controller
         }
 
         // =========================================================================
-        // 2. LOGIKA DASHBOARD TEKNISI
+        // 2. LOGIKA DASHBOARD TEKNISI (PERBAIKAN DISINI)
         // =========================================================================
         if ($user->role === 'teknisi') {
             $teknisiId = $user->id;
 
             // Statistik Tugas
+            // KITAU UBAH 'technician_id' MENJADI 'technician_user_id'
             $taskStats = [
-                // Pastikan nama kolom di database sesuai ('technician_id' atau 'technician_user_id')
-                'assigned' => Task::where('technician_id', $teknisiId)->where('status', 'assigned')->count(),
-                'in_progress' => Task::where('technician_id', $teknisiId)->where('status', 'in_progress')->count(),
-                'completed_today' => Task::where('technician_id', $teknisiId)
+                'assigned' => Task::where('technician_user_id', $teknisiId)->where('status', 'assigned')->count(),
+                'in_progress' => Task::where('technician_user_id', $teknisiId)->where('status', 'in_progress')->count(),
+                'completed_today' => Task::where('technician_user_id', $teknisiId)
                     ->where('status', 'completed')
                     ->whereDate('updated_at', Carbon::today())
                     ->count(),
@@ -79,52 +78,42 @@ class DashboardController extends Controller
         }
 
         // =========================================================================
-        // 3. LOGIKA DASHBOARD ADMINISTRATOR (FULL STATS & CHART)
+        // 3. LOGIKA DASHBOARD ADMINISTRATOR
         // =========================================================================
         
-        // A. Statistik Kartu Atas
         $stats = [
             'total_clients' => User::where('role', 'client')->count(),
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            
-            // Pendapatan Bulan Ini (Hanya dari invoice lunas)
             'monthly_revenue' => Invoice::where('status', 'paid')
                 ->whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year)
                 ->sum('amount'),
-                
-            // Klien Baru Bulan Ini
             'new_clients_monthly' => User::where('role', 'client')
                 ->whereMonth('created_at', Carbon::now()->month)
                 ->count(),
         ];
 
-        // B. Data Grafik Pendapatan Tahunan (Chart)
-        // Mengambil data invoice lunas tahun ini, dikelompokkan per bulan
         $invoices = Invoice::select('amount', 'created_at')
             ->where('status', 'paid')
             ->whereYear('created_at', Carbon::now()->year)
             ->get();
 
         $grouped = $invoices->groupBy(function ($date) {
-            return (int) Carbon::parse($date->created_at)->format('n'); // Group by bulan (1-12)
+            return (int) Carbon::parse($date->created_at)->format('n'); 
         });
 
         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
         $chartData = [];
 
-        // Loop 12 bulan agar grafik tetap utuh walau ada bulan kosong
         for ($i = 1; $i <= 12; $i++) {
             $total = isset($grouped[$i]) ? $grouped[$i]->sum('amount') : 0;
             $chartData[] = [
-                'name' => $monthNames[$i - 1], // Label Bulan
-                'total' => $total,             // Total Rupiah
+                'name' => $monthNames[$i - 1], 
+                'total' => $total,             
             ];
         }
 
-        // Render ke Dashboard Admin
-        // Sesuai konfirmasi file Anda ada di: resources/js/Pages/Dashboard/AdminDashboard.jsx
         return Inertia::render('Dashboard/AdminDashboard', [
             'stats' => $stats,
             'chartData' => $chartData, 
