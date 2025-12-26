@@ -1,0 +1,79 @@
+name: Laravel Testing CI (PostgreSQL)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    # [BARU] Menyalakan Service Database Postgres khusus untuk testing
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: filltech_testing
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Cek kesehatan DB sebelum testing dimulai
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        # Pastikan ekstensi pgsql dan pdo_pgsql aktif
+        extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql
+        coverage: none
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Composer Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Install NPM Dependencies & Build
+      run: |
+        npm install
+        npm run build
+
+    - name: Generate Key
+      run: php artisan key:generate
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    # [FIX] Jalankan Migrasi menggunakan Driver PGSQL
+    # Kita memaksa env vars di sini agar tidak membaca default mysql
+    - name: Run Migrations
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
+        DB_DATABASE: filltech_testing
+        DB_USERNAME: postgres
+        DB_PASSWORD: password
+      run: php artisan migrate --force
+
+    # [FIX] Jalankan Test menggunakan Driver PGSQL
+    - name: Execute Tests (PHPUnit)
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
+        DB_DATABASE: filltech_testing
+        DB_USERNAME: postgres
+        DB_PASSWORD: password
+      run: php artisan test
