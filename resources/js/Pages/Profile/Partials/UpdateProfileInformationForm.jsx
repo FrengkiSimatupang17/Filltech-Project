@@ -2,11 +2,10 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import TextArea from '@/Components/TextArea';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-export default function UpdateProfileInformation({ mustVerifyEmail, status, className = '' }) {
+export default function UpdateProfileInformationForm({ mustVerifyEmail, status, className = '' }) {
     const user = usePage().props.auth.user;
 
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
@@ -18,8 +17,6 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
         rw: user.rw || '',
         blok: user.blok || '',
         nomor_rumah: user.nomor_rumah || '',
-        password: '',
-        password_confirmation: '',
     });
 
     const submit = (e) => {
@@ -27,22 +24,25 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
         patch(route('profile.update'));
     };
 
+    // [FITUR BARU] Fungsi untuk menghilangkan tanda '-' saat diklik
+    const handleFocus = (field) => {
+        if (data[field] === '-') {
+            setData(field, '');
+        }
+    };
+
     return (
         <section className={className}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900">Informasi Profil</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                    Lengkapi data diri dan alamat pemasangan Anda.
+                    Perbarui informasi profil akun dan alamat email Anda.
                 </p>
-                {user.id_unik && (
-                    <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-md text-indigo-800 text-sm font-bold">
-                        ID Pelanggan: {user.id_unik}
-                    </div>
-                )}
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
-                {/* Nama */}
+                
+                {/* --- NAMA --- */}
                 <div>
                     <InputLabel htmlFor="name" value="Nama Lengkap" />
                     <TextInput
@@ -57,152 +57,144 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     <InputError className="mt-2" message={errors.name} />
                 </div>
 
-                {/* Email */}
+                {/* --- EMAIL --- */}
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
                     <TextInput
                         id="email"
                         type="email"
-                        className="mt-1 block w-full bg-gray-50"
+                        className="mt-1 block w-full"
                         value={data.email}
                         onChange={(e) => setData('email', e.target.value)}
                         required
                         autoComplete="username"
-                        disabled={!!user.google_id} 
                     />
                     <InputError className="mt-2" message={errors.email} />
                 </div>
-                
-                {/* Password Baru (Khusus User Google) */}
-                {user.google_id && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-md space-y-4">
-                        <h3 className="text-sm font-bold text-yellow-800">Atur Kata Sandi (Wajib)</h3>
-                        <p className="text-xs text-yellow-700">Untuk keamanan tambahan, silakan buat kata sandi baru.</p>
-                        
-                        <div>
-                            <InputLabel htmlFor="password" value="Password Baru" />
-                            <TextInput
-                                id="password"
-                                type="password"
-                                className="mt-1 block w-full"
-                                value={data.password}
-                                onChange={(e) => setData('password', e.target.value)}
-                                autoComplete="new-password"
-                            />
-                            <InputError className="mt-2" message={errors.password} />
-                        </div>
 
-                        <div>
-                            <InputLabel htmlFor="password_confirmation" value="Konfirmasi Password" />
-                            <TextInput
-                                id="password_confirmation"
-                                type="password"
-                                className="mt-1 block w-full"
-                                value={data.password_confirmation}
-                                onChange={(e) => setData('password_confirmation', e.target.value)}
-                                autoComplete="new-password"
-                            />
-                            <InputError className="mt-2" message={errors.password_confirmation} />
-                        </div>
+                {mustVerifyEmail && user.email_verified_at === null && (
+                    <div>
+                        <p className="text-sm mt-2 text-gray-800">
+                            Alamat email Anda belum diverifikasi.
+                            <Link
+                                href={route('verification.send')}
+                                method="post"
+                                as="button"
+                                className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Klik di sini untuk mengirim ulang email verifikasi.
+                            </Link>
+                        </p>
+                        {status === 'verification-link-sent' && (
+                            <div className="mt-2 font-medium text-sm text-green-600">
+                                Tautan verifikasi baru telah dikirim ke alamat email Anda.
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* Nomor Telepon */}
+                {/* --- NOMOR HP --- */}
                 <div>
-                    <InputLabel htmlFor="phone_number" value="Nomor WhatsApp Aktif" />
+                    <InputLabel htmlFor="phone_number" value="Nomor WhatsApp" />
                     <TextInput
                         id="phone_number"
+                        type="text"
                         className="mt-1 block w-full"
                         value={data.phone_number}
                         onChange={(e) => setData('phone_number', e.target.value)}
-                        autoComplete="tel"
-                        placeholder="08..."
-                        required 
+                        // Auto clear jika isinya '-'
+                        onFocus={() => handleFocus('phone_number')}
+                        placeholder="08123xxxx"
                     />
                     <InputError className="mt-2" message={errors.phone_number} />
                 </div>
 
-                <div className="border-t pt-4">
-                    <h3 className="text-sm font-bold text-gray-900 mb-4">Alamat Pemasangan</h3>
-                    
-                    {/* Field Alamat (Jalan/Perumahan) */}
-                    <div className="mb-4">
-                        <InputLabel htmlFor="alamat" value="Nama Jalan / Perumahan / Patokan" />
-                        <TextArea
-                            id="alamat"
+                {/* --- ALAMAT --- */}
+                <div>
+                    <InputLabel htmlFor="alamat" value="Alamat (Jalan / Gang)" />
+                    <TextInput
+                        id="alamat"
+                        type="text"
+                        className="mt-1 block w-full"
+                        value={data.alamat}
+                        onChange={(e) => setData('alamat', e.target.value)}
+                        // Auto clear jika isinya '-'
+                        onFocus={() => handleFocus('alamat')}
+                    />
+                    <InputError className="mt-2" message={errors.alamat} />
+                </div>
+
+                {/* --- RT & RW --- */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="rt" value="RT" />
+                        <TextInput
+                            id="rt"
+                            type="text"
                             className="mt-1 block w-full"
-                            value={data.alamat}
-                            onChange={(e) => setData('alamat', e.target.value)}
-                            placeholder="Contoh: Perumahan Buana Garden Tahap 2, Depan Masjid..."
-                            rows="2"
-                            required
+                            value={data.rt}
+                            onChange={(e) => setData('rt', e.target.value)}
+                            // Auto clear jika isinya '-'
+                            onFocus={() => handleFocus('rt')}
                         />
-                        <InputError className="mt-2" message={errors.alamat} />
+                        <InputError className="mt-2" message={errors.rt} />
                     </div>
-
-                    {/* Detail RT/RW/Blok/No */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <InputLabel htmlFor="blok" value="Blok" />
-                            <TextInput
-                                id="blok"
-                                className="mt-1 block w-full"
-                                value={data.blok}
-                                onChange={(e) => setData('blok', e.target.value)}
-                                placeholder="A"
-                                required
-                            />
-                            <InputError className="mt-2" message={errors.blok} />
-                        </div>
-                        <div>
-                            <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
-                            <TextInput
-                                id="nomor_rumah"
-                                className="mt-1 block w-full"
-                                value={data.nomor_rumah}
-                                onChange={(e) => setData('nomor_rumah', e.target.value)}
-                                placeholder="12B"
-                                required
-                            />
-                            <InputError className="mt-2" message={errors.nomor_rumah} />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <InputLabel htmlFor="rt" value="RT (3 Digit)" />
-                            <TextInput
-                                id="rt"
-                                className="mt-1 block w-full"
-                                value={data.rt}
-                                onChange={(e) => setData('rt', e.target.value)}
-                                placeholder="001"
-                                required
-                            />
-                            <InputError className="mt-2" message={errors.rt} />
-                        </div>
-                        <div>
-                            <InputLabel htmlFor="rw" value="RW (3 Digit)" />
-                            <TextInput
-                                id="rw"
-                                className="mt-1 block w-full"
-                                value={data.rw}
-                                onChange={(e) => setData('rw', e.target.value)}
-                                placeholder="005"
-                                required
-                            />
-                            <InputError className="mt-2" message={errors.rw} />
-                        </div>
+                    <div>
+                        {/* [FIX] Menghilangkan tulisan (3 Digit) */}
+                        <InputLabel htmlFor="rw" value="RW" />
+                        <TextInput
+                            id="rw"
+                            type="text"
+                            className="mt-1 block w-full"
+                            value={data.rw}
+                            onChange={(e) => setData('rw', e.target.value)}
+                            // Auto clear jika isinya '-'
+                            onFocus={() => handleFocus('rw')}
+                        />
+                        <InputError className="mt-2" message={errors.rw} />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 pt-2">
-                    <PrimaryButton disabled={processing}>Simpan & Lanjutkan</PrimaryButton>
+                {/* --- BLOK & NOMOR --- */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="blok" value="Blok (Opsional)" />
+                        <TextInput
+                            id="blok"
+                            type="text"
+                            className="mt-1 block w-full"
+                            value={data.blok}
+                            onChange={(e) => setData('blok', e.target.value)}
+                            // Auto clear jika isinya '-'
+                            onFocus={() => handleFocus('blok')}
+                        />
+                        <InputError className="mt-2" message={errors.blok} />
+                    </div>
+                    <div>
+                        <InputLabel htmlFor="nomor_rumah" value="Nomor Rumah" />
+                        <TextInput
+                            id="nomor_rumah"
+                            type="text"
+                            className="mt-1 block w-full"
+                            value={data.nomor_rumah}
+                            onChange={(e) => setData('nomor_rumah', e.target.value)}
+                            // Auto clear jika isinya '-'
+                            onFocus={() => handleFocus('nomor_rumah')}
+                        />
+                        <InputError className="mt-2" message={errors.nomor_rumah} />
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <PrimaryButton disabled={processing}>Simpan Perubahan</PrimaryButton>
+
                     <Transition
                         show={recentlySuccessful}
-                        enter="transition ease-in-out"
+                        enter="transition ease-in-out duration-300"
                         enterFrom="opacity-0"
-                        leave="transition ease-in-out"
+                        enterTo="opacity-100"
+                        leave="transition ease-in-out duration-1000"
+                        leaveFrom="opacity-100"
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600">Tersimpan.</p>

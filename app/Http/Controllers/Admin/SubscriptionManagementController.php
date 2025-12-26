@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Subscription;
-use App\Notifications\NewInvoiceNotification;
+use App\Notifications\NewInvoiceNotification; // Pastikan file ini ada
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -27,6 +27,7 @@ class SubscriptionManagementController extends Controller
             });
         }
 
+        // Urutkan 'pending' paling atas, lalu berdasarkan tanggal terbaru
         $subscriptions = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc')
             ->paginate(10)
@@ -39,6 +40,7 @@ class SubscriptionManagementController extends Controller
                 'package_price' => $sub->package->price,
                 'status' => $sub->status,
                 'created_at' => $sub->created_at->translatedFormat('d M Y'),
+                // Cek apakah sudah ada tagihan instalasi (biar tombol tidak muncul 2x)
                 'has_installation_invoice' => $sub->user->invoices()
                     ->where('type', 'installation')
                     ->whereIn('status', ['pending', 'paid'])
@@ -55,6 +57,7 @@ class SubscriptionManagementController extends Controller
     {
         $user = $subscription->user;
 
+        // Cek Double Invoice
         $existingInvoice = $user->invoices()
             ->where('type', 'installation')
             ->whereIn('status', ['pending', 'paid'])
@@ -67,8 +70,9 @@ class SubscriptionManagementController extends Controller
 
         $amount = $subscription->package->price;
 
+        // [PENTING] user_id wajib diisi agar muncul di dashboard client
         $invoice = Invoice::create([
-            'user_id' => $user->id,
+            'user_id' => $user->id, 
             'subscription_id' => $subscription->id,
             'invoice_number' => 'INV-' . time() . '-' . $user->id,
             'amount' => $amount,
@@ -77,7 +81,12 @@ class SubscriptionManagementController extends Controller
             'due_date' => now()->addDays(7),
         ]);
 
-        $user->notify(new NewInvoiceNotification($invoice));
+        // Kirim Notifikasi (Jika class notifikasi sudah dibuat)
+        try {
+            $user->notify(new NewInvoiceNotification($invoice));
+        } catch (\Exception $e) {
+            // Abaikan error notifikasi jika mail server belum setup, agar invoice tetap terbuat
+        }
 
         return Redirect::route('admin.subscriptions.index')
             ->with('success', 'Tagihan instalasi berhasil dibuat senilai Rp ' . number_format($amount, 0, ',', '.'));

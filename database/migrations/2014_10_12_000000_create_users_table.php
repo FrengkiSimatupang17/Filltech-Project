@@ -27,7 +27,7 @@ return new class extends Migration
             // Address Data
             $table->text('alamat')->nullable();
             $table->string('rt', 3)->nullable();
-            $table->string('rw', 3)->nullable();
+            $table->string('rw', 20)->nullable();
             $table->string('blok', 10)->nullable();
             $table->string('nomor_rumah', 10)->nullable();
 

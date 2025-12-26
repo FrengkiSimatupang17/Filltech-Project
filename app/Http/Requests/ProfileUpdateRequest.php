@@ -17,7 +17,7 @@ class ProfileUpdateRequest extends FormRequest
             'phone_number' => ['nullable', 'string', 'max:20'],
             'alamat' => ['nullable', 'string', 'max:500'],
             'rt' => ['nullable', 'string', 'max:3'],
-            'rw' => ['nullable', 'string', 'max:3'],
+            'rw' => ['nullable', 'string', 'max:20'],
             'blok' => ['nullable', 'string', 'max:10'],
             'nomor_rumah' => ['nullable', 'string', 'max:10'],
             'password' => ['nullable', 'confirmed', Password::defaults()], 

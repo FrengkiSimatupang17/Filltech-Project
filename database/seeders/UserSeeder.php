@@ -2,50 +2,71 @@
 
 namespace Database\Seeders;
 
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
-class UserSeeder extends Seeder
-{
+class UserSeeder extends Seeder{
+    /**
+     * Seed the application's database.
+     */
     public function run(): void
     {
-        // 1. Akun Administrator
+        // 1. BUAT AKUN ADMINISTRATOR UTAMA (Dengan Alamat Fisik)
         User::create([
-            'name' => 'Admin Filltech',
-            'email' => 'admin@filltech.com',
-            'password' => Hash::make('password'),
-            'role' => 'administrator',
+            'name'              => 'Administrator Utama',
+            'email'             => 'admin@filltech.com',
+            'password'          => bcrypt('password'), // Password default
+            'role'              => 'administrator',
+            'email_verified_at' => now(),
+            'phone_number'      => '081234567890',
+            
+            // Data Alamat Fisik (Kantor Pusat)
+            'alamat'            => 'Jl. Jenderal Sudirman',
+            'blok'              => 'A',
+            'nomor_rumah'       => '10',
+            'rt'                => '001',
+            'rw'                => '005',
+            
+            // ID Unik akan otomatis dibuat oleh Model User::booted()
+            // Hasilnya nanti akan jadi seperti: 25122025_005_001.10
         ]);
 
-        // 2. Akun Teknisi
+        // 2. BUAT AKUN TEKNISI (Opsional, buat contoh saja)
         User::create([
-            'name' => 'Teknisi Budi',
-            'email' => 'budi@filltech.com',
-            'password' => Hash::make('password'),
-            'role' => 'teknisi',
+            'name'              => 'Teknisi Lapangan',
+            'email'             => 'teknisi@filltech.com',
+            'password'          => bcrypt('password'),
+            'role'              => 'teknisi',
+            'email_verified_at' => now(),
+            'phone_number'      => '089876543210',
+            
+            // Teknisi mungkin tidak butuh alamat lengkap, tapi kita isi dummy agar rapi
+            'alamat'            => 'Mess Karyawan',
+            'blok'              => 'B',
+            'nomor_rumah'       => '01',
+            'rt'                => '002',
+            'rw'                => '005',
         ]);
 
-        User::create([
-            'name' => 'Teknisi Anton',
-            'email' => 'anton@filltech.com',
-            'password' => Hash::make('password'),
-            'role' => 'teknisi',
-        ]);
-
-        // 3. Akun Klien
-        User::create([
-            'name' => 'Klien Siska',
-            'email' => 'siska@client.com',
-            'password' => Hash::make('password'),
-            'role' => 'client',
-            'phone_number' => '081234567890',
-            'rt' => '001',
-            'rw' => '002',
-            'blok' => 'A',
-            'nomor_rumah' => '10',
-            'id_unik' => '20250101_001_002_A10'
-        ]);
+        // 3. BUAT CLIENT DUMMY (Untuk Test Laporan & Filter)
+        // Kita buat 5 client random menggunakan Factory (jika ada) atau loop manual
+        for ($i = 1; $i <= 5; $i++) {
+            User::create([
+                'name'              => "Client Test $i",
+                'email'             => "client$i@gmail.com",
+                'password'          => bcrypt('password'),
+                'role'              => 'client',
+                'email_verified_at' => now(),
+                'phone_number'      => '08571234567' . $i,
+                
+                'alamat'            => 'Jl. Melati Indah',
+                'blok'              => 'C',
+                'nomor_rumah'       => 10 + $i, // 11, 12, dst
+                'rt'                => '003',
+                'rw'                => '008',   // RW 008 (Bisa dites di filter nanti)
+            ]);
+        }
     }
 }

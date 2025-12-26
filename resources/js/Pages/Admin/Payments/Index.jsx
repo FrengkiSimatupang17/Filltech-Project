@@ -1,59 +1,119 @@
-import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router } from '@inertiajs/react';
-import Pagination from '@/Components/Pagination';
-import EmptyState from '@/Components/EmptyState';
+import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
 import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import LoadingOverlay from '@/Components/LoadingOverlay';
+import DangerButton from '@/Components/DangerButton';
+import EmptyState from '@/Components/EmptyState';
+import Pagination from '@/Components/Pagination';
+import ToastNotification from '@/Components/ToastNotification';
+import { FaCheck, FaTimes, FaSearch, FaEye, FaCopy, FaCheckCircle } from 'react-icons/fa';
 
-export default function Index({ auth, payments }) {
-    const [showProofModal, setShowProofModal] = useState(false);
-    const [selectedProofUrl, setSelectedProofUrl] = useState(null);
-    const [processingId, setProcessingId] = useState(null); // State untuk loading per item
+// Helper Component untuk Badge Status
+const StatusBadge = ({ status }) => {
+    let classes = "";
+    let label = "";
 
-    const handleVerification = (paymentId, action) => {
-        const actionText = action === 'approve' ? 'MENYETUJUI' : 'MENOLAK';
-        
-        if (confirm(`Apakah Anda yakin ingin ${actionText} pembayaran ini? Tindakan ini tidak dapat dibatalkan.`)) {
-            setProcessingId(paymentId); // Aktifkan loading
+    switch (status) {
+        case 'verified':
+            classes = "bg-green-100 text-green-800";
+            label = "DITERIMA";
+            break;
+        case 'rejected':
+            classes = "bg-red-100 text-red-800";
+            label = "DITOLAK";
+            break;
+        default:
+            classes = "bg-yellow-100 text-yellow-800";
+            label = "MENUNGGU";
+            break;
+    }
 
-            // Menggunakan POST ke method update di controller (dengan _method: patch)
-            router.post(route('admin.payments.update', paymentId), {
-                _method: 'patch', 
-                action: action,
-            }, {
-                preserveScroll: true,
-                onFinish: () => setProcessingId(null), // Matikan loading setelah selesai
-            });
-        }
+    return (
+        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${classes}`}>
+            {label}
+        </span>
+    );
+};
+
+export default function PaymentIndex({ auth, payments, filters = {} }) {
+    const [search, setSearch] = useState(filters?.search || '');
+    const [selectedPayment, setSelectedPayment] = useState(null);
+    
+    // State Modal
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showApproveModal, setShowApproveModal] = useState(false);
+    
+    const [toastMessage, setToastMessage] = useState(null);
+
+    // useForm hanya digunakan untuk menampung inputan rejection_reason
+    const { data, setData, processing, reset } = useForm({
+        rejection_reason: '',
+    });
+
+    const handleSearch = (e) => {
+        if(e) e.preventDefault();
+        router.get(route('admin.payments.index'), { search }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
 
-    const openProofModal = (url) => {
-        setSelectedProofUrl(url);
-        setShowProofModal(true);
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(number);
     };
 
-    const closeProofModal = () => {
-        setShowProofModal(false);
-        setSelectedProofUrl(null);
+    const copyToClipboard = (text, label) => {
+        navigator.clipboard.writeText(text);
+        setToastMessage(`${label} berhasil disalin!`);
     };
 
-    // Helper: Badge Status
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'pending': 
-                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">PENDING</span>;
-            case 'verified': 
-                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">LUNAS</span>;
-            case 'rejected': 
-                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">DITOLAK</span>;
-            default: 
-                return <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">-</span>;
-        }
+    const openVerifyModal = (payment) => {
+        setSelectedPayment(payment);
     };
 
-    const formatRupiah = (amount) => new Intl.NumberFormat('id-ID').format(amount);
+    const closeModal = () => {
+        setSelectedPayment(null);
+        setShowRejectModal(false);
+        setShowApproveModal(false);
+        reset();
+    };
+
+    const openApproveModal = () => {
+        setShowApproveModal(true);
+    };
+
+    // Menggunakan router.patch agar data terkirim dengan benar
+    const submitApprove = () => {
+        router.patch(route('admin.payments.update', selectedPayment.id), {
+            status: 'verified' 
+        }, {
+            onSuccess: () => {
+                setShowApproveModal(false);
+                closeModal();
+                setToastMessage("Pembayaran berhasil diverifikasi ✅");
+            },
+        });
+    };
+
+    const openRejectModal = () => {
+        setShowRejectModal(true);
+    };
+
+    const submitReject = (e) => {
+        e.preventDefault();
+        router.patch(route('admin.payments.update', selectedPayment.id), {
+            status: 'rejected',
+            rejection_reason: data.rejection_reason
+        }, {
+            onSuccess: () => closeModal(),
+        });
+    };
 
     return (
         <AuthenticatedLayout
@@ -62,188 +122,278 @@ export default function Index({ auth, payments }) {
         >
             <Head title="Verifikasi Pembayaran" />
 
-            {/* Loading Overlay Global jika ada proses berat */}
-            <LoadingOverlay show={!!processingId} message="Memproses Verifikasi..." />
-
-            <div className="py-8">
+            <div className="py-6 sm:py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     
-                    {payments.data.length > 0 ? (
-                        <>
-                            {/* --- DESKTOP TABLE --- */}
-                            <div className="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klien</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tagihan</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {payments.data.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-bold text-gray-900">{payment.user_name}</div>
-                                                    <div className="text-xs text-gray-500">{payment.user_email}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-gray-900">{payment.invoice_number}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        Rp {formatRupiah(payment.amount)} 
-                                                        <span className="ml-2 uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] border border-gray-200">
-                                                            {payment.invoice_type}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {payment.payment_proof_url ? (
-                                                        <button 
-                                                            onClick={() => openProofModal(payment.payment_proof_url)}
-                                                            className="text-blue-600 hover:text-blue-800 text-xs font-semibold underline flex items-center gap-1"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                            </svg>
-                                                            Lihat Foto
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-gray-400 text-xs italic">Tidak ada bukti</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {getStatusBadge(payment.status)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    {payment.status === 'pending' && (
-                                                        <div className="flex justify-end gap-2">
+                    {/* Search Bar */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+                        <form onSubmit={handleSearch} className="flex w-full md:w-1/2 gap-2">
+                            <input
+                                type="text"
+                                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Cari ID, Nama Klien, atau Invoice..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            <PrimaryButton className="justify-center px-4">
+                                <FaSearch />
+                            </PrimaryButton>
+                        </form>
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
+                        {payments.data.length > 0 ? (
+                            <>
+                                {/* --- DESKTOP VIEW (TABLE) --- */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Klien</th>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tagihan</th>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nominal</th>
+                                                <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {payments.data.map((payment) => (
+                                                <tr key={payment.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {new Date(payment.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm font-bold text-gray-900">{payment.invoice?.user?.name || 'User Terhapus'}</div>
+                                                        <div className="text-xs text-gray-500">{payment.invoice?.user?.email}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>#{payment.invoice?.invoice_number}</span>
                                                             <button 
-                                                                onClick={() => handleVerification(payment.id, 'approve')} 
-                                                                disabled={processingId === payment.id}
-                                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-bold shadow-sm transition disabled:opacity-50"
+                                                                onClick={() => copyToClipboard(payment.invoice?.invoice_number, 'No. Invoice')}
+                                                                className="text-gray-400 hover:text-indigo-600"
                                                             >
-                                                                Terima
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleVerification(payment.id, 'reject')} 
-                                                                disabled={processingId === payment.id}
-                                                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs font-bold shadow-sm transition disabled:opacity-50"
-                                                            >
-                                                                Tolak
+                                                                <FaCopy size={12} />
                                                             </button>
                                                         </div>
-                                                    )}
-                                                    {payment.status !== 'pending' && (
-                                                        <span className="text-gray-400 text-xs italic">Selesai</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full mt-1 inline-block">
+                                                            {payment.invoice?.type === 'installation' ? 'Instalasi' : 'Bulanan'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                                        {formatRupiah(payment.amount)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                        <StatusBadge status={payment.status} />
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <PrimaryButton onClick={() => openVerifyModal(payment)} className="text-xs">
+                                                            {payment.status === 'pending' ? 'Proses' : 'Lihat'}
+                                                        </PrimaryButton>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                            {/* --- MOBILE CARD VIEW --- */}
-                            <div className="md:hidden space-y-4">
-                                {payments.data.map((payment) => (
-                                    <div key={payment.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                                        <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-sm">{payment.user_name}</h3>
-                                                <p className="text-xs text-gray-500">{payment.invoice_number}</p>
+                                {/* --- MOBILE VIEW (CARDS) --- */}
+                                <div className="md:hidden space-y-4 p-4 bg-gray-50">
+                                    {payments.data.map((payment) => (
+                                        <div key={payment.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                                            <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-2">
+                                                <div className="text-xs text-gray-500">
+                                                    {new Date(payment.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                                <StatusBadge status={payment.status} />
                                             </div>
-                                            {getStatusBadge(payment.status)}
+
+                                            <div className="space-y-2 mb-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Klien</p>
+                                                    <p className="font-bold text-gray-900">{payment.invoice?.user?.name}</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Invoice</p>
+                                                        <p className="text-sm font-medium text-gray-700">#{payment.invoice?.invoice_number}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">Nominal</p>
+                                                        <p className="text-sm font-bold text-blue-800">{formatRupiah(payment.amount)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => openVerifyModal(payment)}
+                                                className="w-full flex justify-center items-center py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-md hover:bg-indigo-100 text-sm border border-indigo-200"
+                                            >
+                                                <FaEye className="mr-2" />
+                                                {payment.status === 'pending' ? 'Verifikasi Pembayaran' : 'Lihat Detail'}
+                                            </button>
                                         </div>
+                                    ))}
+                                </div>
 
-                                        <div className="space-y-2 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500">Jumlah Tagihan</span>
-                                                <span className="font-bold text-gray-800">Rp {formatRupiah(payment.amount)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500">Tipe Pembayaran</span>
-                                                <span className="capitalize text-gray-700">{payment.invoice_type}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-gray-500">Bukti Transfer</span>
-                                                {payment.payment_proof_url ? (
-                                                    <button 
-                                                        onClick={() => openProofModal(payment.payment_proof_url)}
-                                                        className="text-blue-600 font-medium text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
-                                                    >
-                                                        Lihat
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-gray-400 text-xs">n/a</span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {payment.status === 'pending' && (
-                                            <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-gray-100">
-                                                <button 
-                                                    onClick={() => handleVerification(payment.id, 'approve')} 
-                                                    disabled={processingId === payment.id}
-                                                    className="w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-sm disabled:opacity-50"
-                                                >
-                                                    Terima
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleVerification(payment.id, 'reject')} 
-                                                    disabled={processingId === payment.id}
-                                                    className="w-full py-2.5 bg-white border border-red-500 text-red-500 rounded-lg text-sm font-bold hover:bg-red-50 transition disabled:opacity-50"
-                                                >
-                                                    Tolak
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* --- PAGINATION --- */}
-                            <div className="mt-6">
-                                <Pagination links={payments.links} />
-                            </div>
-                        </>
-                    ) : (
-                        <EmptyState
-                            title="Tidak Ada Pembayaran"
-                            message="Belum ada data pembayaran masuk yang perlu diverifikasi saat ini."
-                        />
-                    )}
+                                {/* Pagination */}
+                                <div className="p-4 border-t border-gray-200 bg-white">
+                                    <Pagination links={payments.links} />
+                                </div>
+                            </>
+                        ) : (
+                            <EmptyState title="Tidak ada pembayaran" message="Belum ada data pembayaran yang sesuai pencarian." />
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* MODAL BUKTI PEMBAYARAN */}
-            <Modal show={showProofModal} onClose={closeProofModal}>
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-gray-900">Bukti Pembayaran</h2>
-                        <button onClick={closeProofModal} className="text-gray-400 hover:text-gray-600 transition">
-                            <span className="text-2xl">&times;</span>
-                        </button>
+            {/* --- MODAL DETAIL PEMBAYARAN --- */}
+            <Modal show={!!selectedPayment && !showRejectModal && !showApproveModal} onClose={closeModal} maxWidth="4xl">
+                {/* [FIX] focusable container added */}
+                <div className="flex flex-col h-full md:h-auto" tabIndex={0}>
+                    <div className="p-4 md:p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                        <h2 className="text-lg md:text-xl font-bold text-gray-900">Detail Pembayaran</h2>
+                        <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                     </div>
-                    <div className="flex justify-center bg-gray-100 rounded-lg p-2 border border-gray-200 min-h-[200px] items-center">
-                        {selectedProofUrl ? (
-                            <img 
-                                src={selectedProofUrl} 
-                                alt="Bukti Transfer" 
-                                className="max-h-[70vh] max-w-full object-contain rounded shadow-sm" 
-                            />
-                        ) : (
-                            <p className="text-gray-500 italic">Gambar tidak dapat dimuat.</p>
-                        )}
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeProofModal}>
-                            Tutup
-                        </SecondaryButton>
+
+                    <div className="p-4 md:p-6 overflow-y-auto" style={{ maxHeight: '80vh' }}>
+                        <div className="flex flex-col md:flex-row gap-6">
+                            <div className="w-full md:w-1/2 bg-gray-100 rounded-lg flex items-center justify-center p-2 border border-gray-200 min-h-[250px] md:min-h-[400px]">
+                                {selectedPayment?.payment_proof_path ? (
+                                    <img 
+                                        src={`/storage/${selectedPayment.payment_proof_path}`} 
+                                        alt="Bukti Transfer" 
+                                        className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm cursor-pointer"
+                                        onClick={() => window.open(`/storage/${selectedPayment.payment_proof_path}`, '_blank')}
+                                    />
+                                ) : (
+                                    <p className="text-gray-500 italic">File tidak ditemukan</p>
+                                )}
+                            </div>
+
+                            <div className="w-full md:w-1/2 space-y-4">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                    <p className="text-xs text-blue-600 font-bold uppercase">Nominal Ditransfer</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-2xl md:text-3xl font-black text-blue-900">
+                                            {selectedPayment && formatRupiah(selectedPayment.amount)}
+                                        </p>
+                                        <button onClick={() => copyToClipboard(selectedPayment.amount.toString(), 'Nominal')} className="text-blue-400 hover:text-blue-700">
+                                            <FaCopy />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Nama Pengirim</p>
+                                        <p className="font-bold text-gray-900 text-base">{selectedPayment?.invoice?.user?.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Tanggal</p>
+                                        <p className="font-bold text-gray-900 text-base">{selectedPayment && new Date(selectedPayment.created_at).toLocaleDateString('id-ID')}</p>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <p className="text-gray-500 text-xs">No. Invoice</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="font-mono font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                                                {selectedPayment?.invoice?.invoice_number}
+                                            </p>
+                                            <button onClick={() => copyToClipboard(selectedPayment?.invoice?.invoice_number, 'No. Invoice')} className="text-gray-400 hover:text-indigo-600">
+                                                <FaCopy />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="pt-6 mt-6 border-t border-gray-100 flex flex-col md:flex-row gap-3">
+                                    <SecondaryButton className="justify-center py-3 w-full" onClick={closeModal}>Tutup</SecondaryButton>
+                                    
+                                    {selectedPayment?.status === 'pending' && (
+                                        <>
+                                            <DangerButton className="justify-center py-3 w-full" onClick={openRejectModal}>
+                                                <FaTimes className="mr-2" /> Tolak
+                                            </DangerButton>
+                                            <PrimaryButton 
+                                                className="justify-center py-3 w-full bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800" 
+                                                onClick={openApproveModal} 
+                                            >
+                                                <FaCheck className="mr-2" /> Terima
+                                            </PrimaryButton>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Modal>
+
+            {/* --- MODAL KONFIRMASI TERIMA (VALID) --- */}
+            <Modal show={showApproveModal} onClose={() => setShowApproveModal(false)} maxWidth="sm">
+                {/* [FIX] focusable container added */}
+                <div className="p-6 text-center" tabIndex={0}>
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 animate-bounce-short">
+                        <FaCheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">Verifikasi Pembayaran?</h2>
+                    <p className="text-sm text-gray-600 mb-6 px-4">
+                        Pastikan dana sebesar <span className="font-bold text-gray-800 bg-gray-100 px-1 rounded">{selectedPayment && formatRupiah(selectedPayment.amount)}</span> sudah masuk ke rekening Anda.
+                        <br/><br/>
+                        Tindakan ini akan mengubah status tagihan menjadi <b>LUNAS</b>.
+                    </p>
+                    <div className="flex justify-center gap-3">
+                        <SecondaryButton className="w-full justify-center" onClick={() => setShowApproveModal(false)}>Batal</SecondaryButton>
+                        <PrimaryButton 
+                            className="w-full justify-center bg-green-600 hover:bg-green-700 focus:bg-green-700" 
+                            onClick={submitApprove} 
+                            disabled={processing}
+                        >
+                            Ya, Valid
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* --- MODAL TOLAK --- */}
+            <Modal show={showRejectModal} onClose={() => setShowRejectModal(false)} maxWidth="md">
+                {/* [FIX] focusable container added */}
+                <form onSubmit={submitReject} className="p-6" tabIndex={0}>
+                    <div className="text-center mb-4">
+                         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+                            <FaTimes className="h-6 w-6 text-red-600" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900">Tolak Pembayaran</h2>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-2">
+                        Berikan alasan penolakan untuk dikirim ke klien:
+                    </p>
+                    
+                    <div className="mb-6">
+                        <textarea
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 p-3 text-sm"
+                            rows="4"
+                            placeholder="Contoh: Bukti transfer buram, nominal tidak sesuai, dll."
+                            value={data.rejection_reason}
+                            onChange={(e) => setData('rejection_reason', e.target.value)}
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div className="flex flex-col-reverse md:flex-row justify-end gap-3">
+                        <SecondaryButton className="justify-center w-full" onClick={() => setShowRejectModal(false)}>Batal</SecondaryButton>
+                        <DangerButton className="justify-center w-full" disabled={processing}>Konfirmasi Tolak</DangerButton>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Toast Notification */}
+            <ToastNotification message={toastMessage} setMessage={setToastMessage} />
+
         </AuthenticatedLayout>
     );
 }

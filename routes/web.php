@@ -12,7 +12,7 @@ use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\AdminAttendanceController; // Controller Baru Diimport
+use App\Http\Controllers\Admin\AdminAttendanceController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\InvoiceController;
@@ -45,73 +45,83 @@ Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCa
 // --- AUTHENTICATED ROUTES ---
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // 1. GROUP PROFILE (TIDAK BOLEH KENA MIDDLEWARE 'profile.complete')
+    // Agar user yang dilempar karena data belum lengkap tetap bisa akses halaman ini untuk edit data.
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Route khusus untuk redirect dari middleware (jika diperlukan)
     Route::get('/profile/complete', [ProfileController::class, 'edit'])->name('profile.complete');
 
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-
-    // --- ADMIN ROUTES ---
-    Route::middleware(['can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
+    // 2. GROUP YANG MEMBUTUHKAN DATA LENGKAP
+    // Semua route di dalam sini akan dicek: Apakah Alamat/No HP sudah diisi?
+    Route::middleware(['profile.complete'])->group(function () {
         
-        // Master Data
-        Route::resource('packages', PackageController::class)->except(['show']);
-        Route::resource('clients', ClientManagementController::class)->except(['show']);
-        Route::resource('technicians', TechnicianManagementController::class)->except(['show', 'create', 'edit']);
-        Route::resource('equipment', EquipmentController::class)->except(['show']);
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Business Logic
-        Route::get('subscriptions', [SubscriptionManagementController::class, 'index'])->name('subscriptions.index');
-        Route::post('subscriptions/{subscription}/invoice', [SubscriptionManagementController::class, 'storeInstallationInvoice'])->name('subscriptions.storeInvoice');
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
-        Route::get('payments', [PaymentVerificationController::class, 'index'])->name('payments.index');
-        Route::patch('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
-
-        Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index');
-        Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update');
-
-        // Reporting & Logs
-        Route::get('reports/export', [ReportController::class, 'exportPdf'])->name('reports.export');
-        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-        
-        // Laporan Absensi (Fitur Baru)
-        Route::get('attendance-report', [AdminAttendanceController::class, 'index'])->name('attendance.report.index');
-        Route::get('attendance-report/export', [AdminAttendanceController::class, 'exportPdf'])->name('attendance.report.export');
-
-        Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
-    });
-
-    // --- CLIENT ROUTES ---
-    Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
-        Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
-        Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
-        Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
-        Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
-        Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index');
-        Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
-    });
-
-    // --- TEKNISI ROUTES ---
-    Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
-        
-        // GROUP KHUSUS: WAJIB CLOCK-IN DULU
-        Route::middleware(['clock_in'])->group(function () {
-            Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
-            Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+        // --- ADMIN ROUTES ---
+        // (Middleware profile.complete aman disini karena logic-nya hanya mencegat role 'client')
+        Route::middleware(['can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
             
-            Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
-            Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
-            Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
+            // Master Data
+            Route::resource('packages', PackageController::class)->except(['show']);
+            Route::resource('clients', ClientManagementController::class)->except(['show']);
+            Route::resource('technicians', TechnicianManagementController::class)->except(['show', 'create', 'edit']);
+            Route::resource('equipment', EquipmentController::class)->except(['show']);
+
+            // Business Logic
+            Route::get('subscriptions', [SubscriptionManagementController::class, 'index'])->name('subscriptions.index');
+            Route::post('subscriptions/{subscription}/invoice', [SubscriptionManagementController::class, 'storeInstallationInvoice'])->name('subscriptions.storeInvoice');
+
+            Route::get('payments', [PaymentVerificationController::class, 'index'])->name('payments.index');
+            Route::patch('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
+
+            Route::get('tasks', [TaskManagementController::class, 'index'])->name('tasks.index');
+            Route::patch('tasks/{task}', [TaskManagementController::class, 'update'])->name('tasks.update');
+
+            // Reporting & Logs
+            Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+            Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+            
+            // Laporan Absensi
+            Route::get('attendance-report', [AdminAttendanceController::class, 'index'])->name('attendance.report.index');
+            Route::get('attendance-report/export', [AdminAttendanceController::class, 'exportPdf'])->name('attendance.report.export');
+
+            Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
         });
 
-        // ABSENSI (Bebas akses agar bisa melakukan Clock-In)
-        Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-        Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        // --- CLIENT ROUTES ---
+        // (Wajib kena middleware profile.complete)
+        Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
+            Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
+            Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
+            Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+            Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
+            Route::get('complaints', [ComplaintController::class, 'index'])->name('complaints.index');
+            Route::post('complaints', [ComplaintController::class, 'store'])->name('complaints.store');
+        });
+
+        // --- TEKNISI ROUTES ---
+        Route::middleware(['can:is-teknisi'])->prefix('teknisi')->name('teknisi.')->group(function () {
+            
+            // GROUP KHUSUS: WAJIB CLOCK-IN DULU
+            Route::middleware(['clock_in'])->group(function () {
+                Route::get('tasks', [TeknisiTaskController::class, 'index'])->name('tasks.index');
+                Route::patch('tasks/{task}', [TeknisiTaskController::class, 'update'])->name('tasks.update');
+                
+                Route::get('equipment', [EquipmentLogController::class, 'index'])->name('equipment.index');
+                Route::post('equipment', [EquipmentLogController::class, 'store'])->name('equipment.store');
+                Route::patch('equipment/{equipmentLog}', [EquipmentLogController::class, 'update'])->name('equipment.update');
+            });
+
+            // ABSENSI (Bebas akses agar bisa melakukan Clock-In)
+            Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+            Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        });
     });
 });
 

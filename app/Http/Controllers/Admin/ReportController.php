@@ -3,74 +3,82 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\FinancialReportExport; // Pastikan class Export diimport
+use Maatwebsite\Excel\Facades\Excel;   // Pastikan library Excel diimport
 
 class ReportController extends Controller
 {
     public function index(Request $request)
     {
-        Carbon::setLocale('id');
+        $query = Payment::with(['invoice.user']);
 
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+        // 1. Filter Tanggal Start
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
 
-        $query = Invoice::where('status', 'paid')
-            ->whereBetween('paid_at', [$startDate, Carbon::parse($endDate)->endOfDay()]);
+        // 2. Filter Tanggal End
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
 
-        $totalRevenue = $query->sum('amount');
-        $totalInvoices = $query->count();
-
-        $dailyBreakdown = (clone $query)->get(['paid_at', 'amount'])
-            ->groupBy(function ($invoice) {
-                return Carbon::parse($invoice->paid_at)->format('Y-m-d');
-            })->map(function ($day) {
-                return $day->sum('amount');
+        // 3. Filter RT
+        if ($request->filled('rt')) {
+            $query->whereHas('invoice.user', function ($q) use ($request) {
+                $q->where('rt', $request->rt);
             });
+        }
 
-        $transactions = $query->orderBy('paid_at', 'desc')
-            ->paginate(10)
-            ->withQueryString()
-            ->through(fn ($inv) => [
-                'id' => $inv->id,
-                'invoice_number' => $inv->invoice_number,
-                'paid_at' => Carbon::parse($inv->paid_at)->translatedFormat('d F Y, H:i'),
-                'amount' => $inv->amount,
-            ]);
+        // 4. Filter RW
+        if ($request->filled('rw')) {
+            $query->whereHas('invoice.user', function ($q) use ($request) {
+                $q->where('rw', $request->rw);
+            });
+        }
+
+        // Status verified
+        $query->where('status', 'verified');
+
+        // Data untuk Tabel (Pagination)
+        $payments = $query->latest()->paginate(10)->withQueryString();
+
+        // Hitung Total Uang & Total Jumlah Data untuk Preview
+        $summaryQuery = $query->clone();
+        $totalRevenue = $summaryQuery->sum('amount');
+        $totalTransactions = $summaryQuery->count();
+
+        // Data Dropdown
+        $availableRt = User::select('rt')->whereNotNull('rt')->where('rt', '!=', '-')->distinct()->orderBy('rt')->pluck('rt');
+        $availableRw = User::select('rw')->whereNotNull('rw')->where('rw', '!=', '-')->distinct()->orderBy('rw')->pluck('rw');
 
         return Inertia::render('Admin/Reports/Index', [
-            'reports' => [
-                'total_revenue' => $totalRevenue,
-                'total_invoices' => $totalInvoices,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'daily_breakdown' => $dailyBreakdown,
-                'transactions' => $transactions,
-            ],
+            'payments' => $payments,
+            'filters' => $request->only(['start_date', 'end_date', 'rt', 'rw']),
+            'totalRevenue' => $totalRevenue,
+            'totalTransactions' => $totalTransactions,
+            'availableRt' => $availableRt,
+            'availableRw' => $availableRw,
         ]);
     }
 
-    public function exportPdf(Request $request)
+    /**
+     * Export ke Excel (XLSX) dengan tampilan cantik
+     */
+    public function export(Request $request)
     {
-        Carbon::setLocale('id');
+        // Ambil filter dari request
+        $filters = $request->only(['start_date', 'end_date', 'rt', 'rw']);
         
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+        // Buat nama file yang dinamis berdasarkan tanggal
+        $dateStr = now()->format('Y-m-d_His');
+        $fileName = "Laporan_Keuangan_{$dateStr}.xlsx";
 
-        $transactions = Invoice::where('status', 'paid')
-            ->whereBetween('paid_at', [$startDate, Carbon::parse($endDate)->endOfDay()])
-            ->orderBy('paid_at', 'asc')
-            ->get();
-
-        $totalRevenue = $transactions->sum('amount');
-        $totalInvoices = $transactions->count();
-
-        $pdf = Pdf::loadView('exports.reports', compact('transactions', 'totalRevenue', 'totalInvoices', 'startDate', 'endDate'))
-            ->setPaper('a4', 'portrait');
-        
-        return $pdf->download('Laporan_Pendapatan_' . Carbon::now()->format('dmY_His') . '.pdf');
+        // Panggil class Export yang sudah kita buat sebelumnya
+        // Class ini akan menangani filter RT, RW, dan Tanggal secara otomatis
+        return Excel::download(new FinancialReportExport($filters), $fileName);
     }
 }

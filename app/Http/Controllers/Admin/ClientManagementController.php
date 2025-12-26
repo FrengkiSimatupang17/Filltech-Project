@@ -13,41 +13,69 @@ use Inertia\Inertia;
 
 class ClientManagementController extends Controller
 {
-    public function index(Request $request)
-    {
-        $query = User::where('role', 'client');
+public function index(Request $request)
+{
+    $query = User::where('role', 'client');
 
-        if ($request->has('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('id_unik', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $users = $query->orderBy('name')
-            ->paginate(10)
-            ->withQueryString()
-            ->through(fn ($user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'id_unik' => $user->id_unik,
-                'phone_number' => $user->phone_number,
-                'address_full' => $user->address_detail,
-                'alamat' => $user->alamat,
-                'rt' => $user->rt,
-                'rw' => $user->rw,
-                'blok' => $user->blok,
-                'nomor_rumah' => $user->nomor_rumah,
-            ]);
-
-        return Inertia::render('Admin/Clients/Index', [
-            'users' => $users,
-            'filters' => $request->only(['search']),
-        ]);
+    // 1. Filter Search (Existing)
+    if ($request->filled('search')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->search . '%')
+              ->orWhere('email', 'like', '%' . $request->search . '%')
+              ->orWhere('id_unik', 'like', '%' . $request->search . '%');
+        });
     }
+
+    // 2. [BARU] Filter RT
+    if ($request->filled('rt')) {
+        $query->where('rt', $request->rt);
+    }
+
+    // 3. [BARU] Filter RW
+    if ($request->filled('rw')) {
+        $query->where('rw', $request->rw);
+    }
+
+    $users = $query->orderBy('name')
+        ->paginate(10)
+        ->withQueryString() // Penting agar filter tidak hilang saat pindah halaman
+        ->through(fn ($user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'id_unik' => $user->id_unik,
+            'phone_number' => $user->phone_number,
+            'address_full' => $user->address_detail,
+            'rt' => $user->rt,
+            'rw' => $user->rw,
+            'blok' => $user->blok,
+            'nomor_rumah' => $user->nomor_rumah,
+        ]);
+
+    // 4. [BARU] Ambil Data RT dan RW Unik untuk Dropdown Frontend
+    // Mengambil hanya dari role client agar relevan
+    $availableRt = User::where('role', 'client')
+        ->whereNotNull('rt')
+        ->where('rt', '!=', '-')
+        ->distinct()
+        ->orderBy('rt')
+        ->pluck('rt');
+
+    $availableRw = User::where('role', 'client')
+        ->whereNotNull('rw')
+        ->where('rw', '!=', '-')
+        ->distinct()
+        ->orderBy('rw')
+        ->pluck('rw');
+
+    return Inertia::render('Admin/Clients/Index', [
+        'users' => $users,
+        'filters' => $request->only(['search', 'rt', 'rw']),
+        'availableRt' => $availableRt, // Kirim ke frontend
+        'availableRw' => $availableRw, // Kirim ke frontend
+    ]);
+}
 
     public function store(Request $request)
     {
@@ -58,8 +86,11 @@ class ClientManagementController extends Controller
             'id_unik' => 'nullable|string|max:100|unique:users',
             'phone_number' => 'nullable|string|max:20',
             'alamat' => 'nullable|string|max:500',
-            'rt' => ['nullable', 'string', 'max:3'],
-            'rw' => ['nullable', 'string', 'max:3'],
+            
+            // [FIX] Ubah max:3 menjadi max:20
+            'rt' => ['nullable', 'string', 'max:20'],
+            'rw' => ['nullable', 'string', 'max:20'],
+            
             'blok' => ['nullable', 'string', 'max:10'],
             'nomor_rumah' => ['nullable', 'string', 'max:10'],
         ]);
@@ -69,7 +100,7 @@ class ClientManagementController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'client',
-            'id_unik' => $request->id_unik,
+            'id_unik' => $request->id_unik, // Bisa null, nanti di-handle model
             'phone_number' => $request->phone_number,
             'alamat' => $request->alamat,
             'rt' => $request->rt,
@@ -80,7 +111,7 @@ class ClientManagementController extends Controller
 
         return Redirect::route('admin.clients.index')->with('success', 'Klien baru berhasil ditambahkan!');
     }
-    
+
     public function update(Request $request, User $client)
     {
         $request->validate([
@@ -90,8 +121,11 @@ class ClientManagementController extends Controller
             'id_unik' => ['nullable', 'string', 'max:100', Rule::unique('users')->ignore($client->id)],
             'phone_number' => 'nullable|string|max:20',
             'alamat' => 'nullable|string|max:500',
+            
+            // [FIX] Ubah max:3 menjadi max:20
             'rt' => ['nullable', 'string', 'max:3'],
-            'rw' => ['nullable', 'string', 'max:3'],
+            'rw' => ['nullable', 'string', 'max:20'],
+            
             'blok' => ['nullable', 'string', 'max:10'],
             'nomor_rumah' => ['nullable', 'string', 'max:10'],
         ]);
@@ -110,7 +144,6 @@ class ClientManagementController extends Controller
     public function destroy(User $client)
     {
         $client->delete();
-
         return Redirect::route('admin.clients.index')->with('success', 'Akun klien berhasil dihapus.');
     }
 }

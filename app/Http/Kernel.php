@@ -48,6 +48,7 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'profile.complete' => \App\Http\Middleware\EnsureProfileCompleted::class,
         'clock_in' => \App\Http\Middleware\RequireClockIn::class, 
     ];
 }
