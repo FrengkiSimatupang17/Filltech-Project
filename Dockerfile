@@ -2,19 +2,20 @@
 FROM php:8.2-apache
 
 # 2. Install dependensi sistem yang dibutuhkan
-# [FIX] Ditambahkan: libpng-dev, libjpeg-dev, libfreetype6-dev untuk GD Extension
+# [FIX] Ditambahkan: libzip-dev (untuk zip) dan ekstensi zip
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
+    libzip-dev \
     unzip \
     curl \
     gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql gd
+    && docker-php-ext-install pdo pdo_pgsql gd zip
 
 # 3. Aktifkan mod_rewrite Apache (Wajib untuk Laravel)
 RUN a2enmod rewrite
