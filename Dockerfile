@@ -1,15 +1,20 @@
 # 1. Gunakan Image PHP 8.2 dengan Apache
 FROM php:8.2-apache
 
-# 2. Install dependensi sistem yang dibutuhkan (Termasuk Node.js untuk Inertia)
+# 2. Install dependensi sistem yang dibutuhkan
+# [FIX] Ditambahkan: libpng-dev, libjpeg-dev, libfreetype6-dev untuk GD Extension
 RUN apt-get update && apt-get install -y \
     libpq-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     unzip \
     curl \
     gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && docker-php-ext-install pdo pdo_pgsql
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_pgsql gd
 
 # 3. Aktifkan mod_rewrite Apache (Wajib untuk Laravel)
 RUN a2enmod rewrite
