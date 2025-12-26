@@ -1,0 +1,49 @@
+name: Laravel Testing CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, sqlite3
+        coverage: none
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Composer Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Install NPM Dependencies & Build
+      run: |
+        npm install
+        npm run build
+
+    - name: Generate Key
+      run: php artisan key:generate
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    - name: Create Database (SQLite)
+      run: |
+        touch database/database.sqlite
+        php artisan migrate --force
+
+    - name: Execute Tests (PHPUnit)
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test
