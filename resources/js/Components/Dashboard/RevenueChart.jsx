@@ -1,62 +1,63 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
-import {
-    Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
-} from 'chart.js';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-const RevenueChart = ({ data }) => {
-    if (!data || data.length === 0) {
-        return (
-            <div className="flex h-full w-full items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                <p className="text-gray-400 text-sm">Data grafik tidak tersedia</p>
-            </div>
-        );
-    }
-
-    const chartData = {
-        labels: data.map(item => item.month),
-        datasets: [
-            {
-                label: 'Pendapatan',
-                data: data.map(item => item.total),
-                backgroundColor: '#3B82F6',
-                hoverBackgroundColor: '#2563EB',
-                borderRadius: 4,
-                barThickness: 'flex', 
-                maxBarThickness: 40,
-            },
-        ],
+export default function RevenueChart({ data }) {
+    // Fungsi format rupiah untuk tooltip
+    const formatRupiah = (value) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(value);
     };
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { borderDash: [2, 4] },
-                ticks: {
-                    font: { size: 10 },
-                    callback: (value) => 'Rp ' + (value / 1000) + 'k'
-                }
-            },
-            x: {
-                grid: { display: false },
-                ticks: { font: { size: 11 } }
-            }
+    // Custom Tooltip agar terlihat rapi
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white p-3 border border-gray-200 shadow-lg rounded-lg">
+                    <p className="font-bold text-gray-700">{label}</p>
+                    <p className="text-blue-600 font-semibold">
+                        {formatRupiah(payload[0].value)}
+                    </p>
+                </div>
+            );
         }
+        return null;
     };
 
     return (
-        <div className="relative h-full w-full">
-            <Bar data={chartData} options={options} />
-        </div>
+        <ResponsiveContainer width="100%" height="100%">
+            {/* Pastikan data yang diterima tidak null */}
+            <BarChart data={data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                
+                {/* Sumbu X menampilkan nama bulan (Jan, Feb...) */}
+                <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#6B7280', fontSize: 12 }} 
+                    dy={10}
+                />
+                
+                {/* Sumbu Y menampilkan angka */}
+                <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#6B7280', fontSize: 12 }} 
+                    tickFormatter={(value) => `${value / 1000}k`} // Singkat angka (150k)
+                />
+                
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F3F4F6' }} />
+                
+                {/* Batang Grafik: dataKey WAJIB 'total' sesuai controller */}
+                <Bar 
+                    dataKey="total" 
+                    fill="#3B82F6" 
+                    radius={[4, 4, 0, 0]} 
+                    barSize={40}
+                />
+            </BarChart>
+        </ResponsiveContainer>
     );
-};
-
-export default RevenueChart;
+}
