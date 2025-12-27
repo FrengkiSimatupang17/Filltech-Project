@@ -8,12 +8,10 @@ use App\Models\Subscription;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Attendance;
-use App\Models\EquipmentLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -35,6 +33,7 @@ class DashboardController extends Controller
                 ->latest()
                 ->first();
 
+            // PASTIKAN PATH INI SESUAI: resources/js/Pages/Dashboard/ClientDashboard.jsx
             return Inertia::render('Dashboard/ClientDashboard', [
                 'subscription' => $subscription,
                 'unpaid_invoice' => $unpaidInvoice,
@@ -62,6 +61,7 @@ class DashboardController extends Controller
 
             $isClockedIn = $todayAttendance && !$todayAttendance->clock_out;
 
+            // PASTIKAN PATH INI SESUAI: resources/js/Pages/Dashboard/TeknisiDashboard.jsx
             return Inertia::render('Dashboard/TeknisiDashboard', [
                 'taskStats' => $taskStats,
                 'todayAttendance' => $todayAttendance ? [
@@ -76,7 +76,6 @@ class DashboardController extends Controller
         // 3. DASHBOARD ADMIN
         // ---------------------------------------------------------------------
         
-        // A. Statistik Kartu (Stats)
         $stats = [
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'pending_tasks' => Task::where('status', 'pending')->count(),
@@ -84,47 +83,36 @@ class DashboardController extends Controller
                 ->whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year)
                 ->count(),
-            // Pendapatan Bulan Ini (Total amount dari invoice lunas bulan ini)
             'monthly_revenue' => Invoice::where('status', 'paid')
                 ->whereMonth('paid_at', Carbon::now()->month)
                 ->whereYear('paid_at', Carbon::now()->year)
                 ->sum('amount'),
         ];
 
-        // B. Data Grafik Pendapatan (Chart)
-        // Logika: Ambil invoice lunas tahun ini, grouping per bulan
-        
-        // 1. Siapkan array kosong untuk 12 bulan (Jan-Des) dengan nilai 0
+        // Logika Grafik
         $monthlyRevenue = array_fill(1, 12, 0);
-
-        // 2. Ambil data dari database
         $invoices = Invoice::where('status', 'paid')
             ->whereYear('paid_at', Carbon::now()->year)
             ->get();
 
-        // 3. Masukkan data database ke array bulan
         foreach ($invoices as $invoice) {
-
             if ($invoice->paid_at) {
-                $monthNumber = $invoice->paid_at->month; // Mengembalikan int 1-12
+                $monthNumber = $invoice->paid_at->month;
                 $monthlyRevenue[$monthNumber] += $invoice->amount;
             }
         }
 
-        // 4. Format ulang agar sesuai dengan Recharts/ChartJS di Frontend
-        // Format Output: [ {name: 'Jan', total: 50000}, {name: 'Feb', total: 0}, ... ]
         $chart = [];
         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
         foreach ($monthlyRevenue as $num => $total) {
             $chart[] = [
-                'name' => $monthNames[$num - 1], // Ambil nama bulan berdasarkan index
+                'name' => $monthNames[$num - 1],
                 'total' => $total
             ];
         }
 
-        // Return ke Inertia dengan nama prop 'chart' sesuai request AdminDashboard.jsx
-        return Inertia::render('Admin/Dashboard', [
+        return Inertia::render('Dashboard/AdminDashboard', [
             'stats' => $stats,
             'chart' => $chart, 
         ]);
