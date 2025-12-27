@@ -17,8 +17,12 @@ export default function Index({ auth, invoices }) {
     const [activeGuide, setActiveGuide] = useState(null);
     const [copyNotification, setCopyNotification] = useState(null);
 
+    // [UPDATE] Menambahkan field baru: amount, payment_date, payment_method
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         invoice_id: '',
+        amount: '',
+        payment_date: '',
+        payment_method: 'Transfer Bank',
         payment_proof: null,
     });
 
@@ -28,7 +32,15 @@ export default function Index({ auth, invoices }) {
         setPreviewUrl(null);
         setActiveGuide(null);
         setSelectedInvoice(invoice);
-        setData('invoice_id', invoice.id);
+        
+        // [UPDATE] Set default value saat modal dibuka
+        setData({
+            invoice_id: invoice.id,
+            amount: invoice.amount, // Default isi dengan total tagihan
+            payment_date: new Date().toISOString().split('T')[0], // Default hari ini
+            payment_method: 'Transfer Bank',
+            payment_proof: null
+        });
     };
 
     const closeModal = () => {
@@ -237,7 +249,6 @@ export default function Index({ auth, invoices }) {
 
                     {/* Content - Scrollable */}
                     <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 120px)' }}>
-                        {/* [FIX] Gunakan grid-cols-1 untuk Mobile, grid-cols-2 untuk Desktop */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             
                             {/* BAGIAN KIRI: Info Rekening & Panduan */}
@@ -290,23 +301,66 @@ export default function Index({ auth, invoices }) {
                                 </div>
                             </div>
 
-                            {/* BAGIAN KANAN: Upload Bukti */}
-                            {/* Di mobile, ini akan muncul paling atas (Order 1) agar user bisa langsung upload jika sudah bayar */}
+                            {/* BAGIAN KANAN: Form Upload & Input Data */}
                             <div className="order-1 md:order-2 bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 flex flex-col">
                                 <h3 className="font-bold text-gray-800 mb-4 flex items-center">
-                                    <FaFileUpload className="mr-2 text-indigo-600" /> Upload Bukti
+                                    <FaFileUpload className="mr-2 text-indigo-600" /> Konfirmasi Pembayaran
                                 </h3>
-                                <form onSubmit={submitPayment} className="flex-1 flex flex-col">
-                                    <div className="mb-4 flex-1 flex flex-col justify-center">
+                                <form onSubmit={submitPayment} className="flex-1 flex flex-col space-y-4">
+                                    
+                                    {/* [BARU] Input Jumlah Bayar */}
+                                    <div>
+                                        <InputLabel htmlFor="amount" value="Jumlah Transfer (Rp)" />
+                                        <input
+                                            id="amount"
+                                            type="number"
+                                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            value={data.amount}
+                                            onChange={(e) => setData('amount', e.target.value)}
+                                        />
+                                        <InputError message={errors.amount} className="mt-2" />
+                                    </div>
+
+                                    {/* [BARU] Input Tanggal & Metode (Grid) */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <InputLabel htmlFor="payment_date" value="Tanggal" />
+                                            <input
+                                                id="payment_date"
+                                                type="date"
+                                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                value={data.payment_date}
+                                                onChange={(e) => setData('payment_date', e.target.value)}
+                                            />
+                                            <InputError message={errors.payment_date} className="mt-2" />
+                                        </div>
+                                        <div>
+                                            <InputLabel htmlFor="payment_method" value="Metode" />
+                                            <select
+                                                id="payment_method"
+                                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                value={data.payment_method}
+                                                onChange={(e) => setData('payment_method', e.target.value)}
+                                            >
+                                                <option value="Transfer Bank">Transfer Bank</option>
+                                                <option value="Tunai">Tunai / Cash</option>
+                                                <option value="E-Wallet">E-Wallet</option>
+                                            </select>
+                                            <InputError message={errors.payment_method} className="mt-2" />
+                                        </div>
+                                    </div>
+
+                                    {/* Input File Upload */}
+                                    <div>
                                         <InputLabel htmlFor="payment_proof" value="Foto / Screenshot Bukti" className="mb-2" />
-                                        <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[200px] bg-white relative hover:bg-gray-50 transition">
+                                        <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[150px] bg-white relative hover:bg-gray-50 transition">
                                             {previewUrl ? (
                                                 <div className="relative w-full h-full">
-                                                    <img src={previewUrl} alt="Preview Bukti" className="w-full h-auto max-h-[300px] object-contain rounded-md" />
+                                                    <img src={previewUrl} alt="Preview Bukti" className="w-full h-auto max-h-[200px] object-contain rounded-md" />
                                                     <button type="button" onClick={removeImage} className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 transition"><FaTrash size={12} /></button>
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8">
+                                                <div className="text-center py-4">
                                                     <FaImage className="mx-auto h-12 w-12 text-gray-300 mb-2" />
                                                     <p className="text-sm text-gray-500">Klik untuk memilih file</p>
                                                 </div>
@@ -315,6 +369,7 @@ export default function Index({ auth, invoices }) {
                                         <input type="file" id="payment_proof_input" className="mt-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" onChange={handleFileChange} accept="image/*" />
                                         <InputError message={errors.payment_proof} className="mt-2" />
                                     </div>
+
                                     <div className="mt-auto border-t pt-4">
                                         <PrimaryButton className="w-full justify-center py-3 text-base md:text-lg" disabled={processing || !data.payment_proof}>{processing ? 'Mengirim...' : 'Kirim Bukti'}</PrimaryButton>
                                         <SecondaryButton className="w-full justify-center mt-2" onClick={closeModal}>Batal</SecondaryButton>

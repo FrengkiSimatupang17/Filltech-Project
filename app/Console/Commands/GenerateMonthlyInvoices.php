@@ -2,58 +2,48 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Invoice;
-use App\Models\Subscription;
-use App\Notifications\NewInvoiceNotification;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
+use App\Models\Subscription;
+use App\Models\Invoice;
+use Carbon\Carbon;
 
 class GenerateMonthlyInvoices extends Command
 {
-    protected $signature = 'app:generate-monthly-invoices';
-
-    protected $description = 'Generate monthly invoices for all active subscriptions';
+    protected $signature = 'billing:generate-monthly';
+    protected $description = 'Generate invoice bulanan untuk langganan aktif';
 
     public function handle()
     {
-        $this->info('Starting to generate monthly invoices...');
-
+        // Cari langganan AKTIF yang tanggal tagihannya hari ini
+        // Asumsi: Kita tagih setiap tanggal 1 atau sesuai tanggal aktivasi
+        // Logika sederhana: Tagih semua yang aktif
+        
+        $activeSubs = Subscription::where('status', 'active')->get();
         $count = 0;
-        $now = Carbon::now();
 
-        // Gunakan chunk untuk performa lebih baik saat data banyak
-        Subscription::with(['user', 'package'])
-            ->where('status', 'active')
-            ->chunk(100, function ($subscriptions) use ($now, &$count) {
-                foreach ($subscriptions as $subscription) {
-                    $user = $subscription->user;
-                    $package = $subscription->package;
+        foreach ($activeSubs as $sub) {
+            // Cek apakah sudah ada invoice untuk bulan ini agar tidak duplikat
+            $existingInvoice = Invoice::where('subscription_id', $sub->id)
+                ->where('type', 'monthly')
+                ->whereMonth('created_at', Carbon::now()->month)
+                ->whereYear('created_at', Carbon::now()->year)
+                ->exists();
 
-                    // Cek apakah tagihan bulan ini sudah ada
-                    $invoiceExists = Invoice::where('subscription_id', $subscription->id)
-                        ->where('type', 'monthly')
-                        ->whereYear('created_at', $now->year)
-                        ->whereMonth('created_at', $now->month)
-                        ->exists();
+            if (!$existingInvoice) {
+                // Buat Invoice Baru
+                Invoice::create([
+                    'user_id' => $sub->user_id,
+                    'subscription_id' => $sub->id,
+                    'invoice_number' => 'INV-' . date('Ymd') . '-' . rand(1000, 9999),
+                    'amount' => $sub->price, // Harga paket
+                    'status' => 'pending',
+                    'type' => 'monthly',
+                    'due_date' => Carbon::now()->addDays(10), // Jatuh tempo 10 hari lagi
+                ]);
+                $count++;
+            }
+        }
 
-                    if (!$invoiceExists) {
-                        $invoice = Invoice::create([
-                            'user_id' => $user->id,
-                            'subscription_id' => $subscription->id,
-                            'invoice_number' => 'INV-MTH-' . $now->format('Ym') . '-' . $user->id,
-                            'amount' => $package->price,
-                            'status' => 'pending',
-                            'type' => 'monthly',
-                            'due_date' => $now->copy()->addDays(7),
-                        ]);
-
-                        $user->notify(new NewInvoiceNotification($invoice));
-                        $count++;
-                    }
-                }
-            });
-
-        $this->info("Successfully generated $count new monthly invoices.");
-        return 0;
+        $this->info("Berhasil membuat $count invoice bulanan.");
     }
 }
