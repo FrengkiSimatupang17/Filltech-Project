@@ -8,10 +8,12 @@ use App\Models\Subscription;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Attendance;
+use App\Models\EquipmentLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -19,9 +21,9 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // =========================================================================
-        // 1. LOGIKA DASHBOARD CLIENT
-        // =========================================================================
+        // ---------------------------------------------------------------------
+        // 1. DASHBOARD CLIENT
+        // ---------------------------------------------------------------------
         if ($user->role === 'client') {
             $subscription = Subscription::with('package')
                 ->where('user_id', $user->id)
@@ -29,7 +31,7 @@ class DashboardController extends Controller
                 ->first();
 
             $unpaidInvoice = Invoice::where('user_id', $user->id)
-                ->whereIn('status', ['pending', 'overdue']) // Cek status pending/overdue
+                ->whereIn('status', ['pending', 'overdue'])
                 ->latest()
                 ->first();
 
@@ -39,9 +41,9 @@ class DashboardController extends Controller
             ]);
         }
 
-        // =========================================================================
-        // 2. LOGIKA DASHBOARD TEKNISI
-        // =========================================================================
+        // ---------------------------------------------------------------------
+        // 2. DASHBOARD TEKNISI
+        // ---------------------------------------------------------------------
         if ($user->role === 'teknisi') {
             $teknisiId = $user->id;
 
@@ -70,54 +72,61 @@ class DashboardController extends Controller
             ]);
         }
 
-        // =========================================================================
-        // 3. LOGIKA DASHBOARD ADMINISTRATOR
-        // =========================================================================
+        // ---------------------------------------------------------------------
+        // 3. DASHBOARD ADMIN
+        // ---------------------------------------------------------------------
         
-        // A. Statistik Kartu (Card Stats)
+        // A. Statistik Kartu (Stats)
         $stats = [
-            'total_clients' => User::where('role', 'client')->count(),
             'pending_payments' => Payment::where('status', 'pending')->count(),
-            'pending_tasks' => Task::where('status', 'pending')->count(), // Tugas belum di-assign
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            
-            // Pendapatan Bulan Ini (Berdasarkan tanggal BAYAR, bukan tanggal buat)
-            'monthly_revenue' => Invoice::where('status', 'paid')
-                ->whereYear('paid_at', Carbon::now()->year)
-                ->whereMonth('paid_at', Carbon::now()->month)
-                ->sum('amount'),
-                
+            'pending_tasks' => Task::where('status', 'pending')->count(),
             'new_clients_monthly' => User::where('role', 'client')
                 ->whereMonth('created_at', Carbon::now()->month)
+                ->whereYear('created_at', Carbon::now()->year)
                 ->count(),
+            // Pendapatan Bulan Ini (Total amount dari invoice lunas bulan ini)
+            'monthly_revenue' => Invoice::where('status', 'paid')
+                ->whereMonth('paid_at', Carbon::now()->month)
+                ->whereYear('paid_at', Carbon::now()->year)
+                ->sum('amount'),
         ];
 
-        // B. Data Grafik (Chart Data) - Berdasarkan Tanggal Bayar (paid_at)
-        // Kita ambil semua invoice lunas tahun ini
-        $paidInvoices = Invoice::where('status', 'paid')
+        // B. Data Grafik Pendapatan (Chart)
+        // Logika: Ambil invoice lunas tahun ini, grouping per bulan
+        
+        // 1. Siapkan array kosong untuk 12 bulan (Jan-Des) dengan nilai 0
+        $monthlyRevenue = array_fill(1, 12, 0);
+
+        // 2. Ambil data dari database
+        $invoices = Invoice::where('status', 'paid')
             ->whereYear('paid_at', Carbon::now()->year)
             ->get();
 
-        // Kelompokkan berdasarkan Bulan (1-12)
-        $groupedRevenue = $paidInvoices->groupBy(function ($inv) {
-            // Pastikan paid_at tidak null (safety check)
-            return $inv->paid_at ? (int)$inv->paid_at->format('n') : 0;
-        });
+        // 3. Masukkan data database ke array bulan
+        foreach ($invoices as $invoice) {
 
+            if ($invoice->paid_at) {
+                $monthNumber = $invoice->paid_at->month; // Mengembalikan int 1-12
+                $monthlyRevenue[$monthNumber] += $invoice->amount;
+            }
+        }
+
+        // 4. Format ulang agar sesuai dengan Recharts/ChartJS di Frontend
+        // Format Output: [ {name: 'Jan', total: 50000}, {name: 'Feb', total: 0}, ... ]
+        $chart = [];
         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        $chartData = [];
 
-        // Loop 12 bulan untuk mengisi data (termasuk bulan kosong dengan nilai 0)
-        for ($i = 1; $i <= 12; $i++) {
-            $chartData[] = [
-                'name' => $monthNames[$i - 1],
-                'total' => isset($groupedRevenue[$i]) ? $groupedRevenue[$i]->sum('amount') : 0,
+        foreach ($monthlyRevenue as $num => $total) {
+            $chart[] = [
+                'name' => $monthNames[$num - 1], // Ambil nama bulan berdasarkan index
+                'total' => $total
             ];
         }
 
-        return Inertia::render('Dashboard/AdminDashboard', [
+        // Return ke Inertia dengan nama prop 'chart' sesuai request AdminDashboard.jsx
+        return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
-            'chartData' => $chartData,
+            'chart' => $chart, 
         ]);
     }
 }
