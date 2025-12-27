@@ -47,15 +47,23 @@ Route::get('/auth/google/callback', [SocialiteController::class, 'handleGoogleCa
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // 1. GROUP PROFILE (TIDAK BOLEH KENA MIDDLEWARE 'profile.complete')
-    // Agar user yang dilempar karena data belum lengkap tetap bisa akses halaman ini untuk edit data.
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    // Route khusus untuk redirect dari middleware (jika diperlukan)
     Route::get('/profile/complete', [ProfileController::class, 'edit'])->name('profile.complete');
 
+    // --- RUTE DARURAT PERBAIKAN DATA (STEP 1) ---
+    // Ditaruh disini agar bisa diakses admin meskipun profil belum lengkap
+    Route::get('/fix-data-grafik', function () {
+        // Cari semua invoice yg statusnya 'paid' TAPI tanggal bayarnya masih kosong
+        $affected = \App\Models\Invoice::where('status', 'paid')
+            ->whereNull('paid_at')
+            ->update(['paid_at' => now()]); // Isi paksa dengan tanggal hari ini
+            
+        return "Data diperbaiki: $affected transaksi. Silakan refresh dashboard.";
+    });
+
     // 2. GROUP YANG MEMBUTUHKAN DATA LENGKAP
-    // Semua route di dalam sini akan dicek: Apakah Alamat/No HP sudah diisi?
     Route::middleware(['profile.complete'])->group(function () {
         
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -64,7 +72,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
         // --- ADMIN ROUTES ---
-        // (Middleware profile.complete aman disini karena logic-nya hanya mencegat role 'client')
         Route::middleware(['can:is-admin'])->prefix('admin')->name('admin.')->group(function () {
             
             // Master Data
@@ -95,7 +102,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         // --- CLIENT ROUTES ---
-        // (Wajib kena middleware profile.complete)
         Route::middleware(['can:is-client'])->prefix('client')->name('client.')->group(function () {
             Route::get('subscribe', [SubscriptionController::class, 'index'])->name('subscribe.index');
             Route::post('subscribe', [SubscriptionController::class, 'store'])->name('subscribe.store');
@@ -121,15 +127,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // ABSENSI (Bebas akses agar bisa melakukan Clock-In)
             Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
             Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-        });
-
-        Route::get('/fix-data-grafik', function () {
-    // Cari semua invoice yg statusnya 'paid' TAPI tanggal bayarnya masih kosong
-    $affected = \App\Models\Invoice::where('status', 'paid')
-        ->whereNull('paid_at')
-        ->update(['paid_at' => now()]); // Isi paksa dengan tanggal hari ini
-        
-    return "Data diperbaiki: $affected transaksi. Silakan refresh dashboard.";
         });
     });
 });
