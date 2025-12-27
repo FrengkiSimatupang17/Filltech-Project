@@ -122,6 +122,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
             Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
         });
+
+        Route::get('/fix-data-grafik', function () {
+    // Cari semua invoice yg statusnya 'paid' TAPI tanggal bayarnya masih kosong
+    $affected = \App\Models\Invoice::where('status', 'paid')
+        ->whereNull('paid_at')
+        ->update(['paid_at' => now()]); // Isi paksa dengan tanggal hari ini
+        
+    return "Data diperbaiki: $affected transaksi. Silakan refresh dashboard.";
+        });
     });
 });
 

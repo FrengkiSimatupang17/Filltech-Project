@@ -19,63 +19,40 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // ---------------------------------------------------------------------
-        // 1. DASHBOARD CLIENT
-        // ---------------------------------------------------------------------
+        // --- DASHBOARD CLIENT ---
         if ($user->role === 'client') {
-            $subscription = Subscription::with('package')
-                ->where('user_id', $user->id)
-                ->latest()
-                ->first();
+            $subscription = Subscription::with('package')->where('user_id', $user->id)->latest()->first();
+            $unpaidInvoice = Invoice::where('user_id', $user->id)->whereIn('status', ['pending', 'overdue'])->latest()->first();
 
-            $unpaidInvoice = Invoice::where('user_id', $user->id)
-                ->whereIn('status', ['pending', 'overdue'])
-                ->latest()
-                ->first();
-
-            // PASTIKAN PATH INI SESUAI: resources/js/Pages/Dashboard/ClientDashboard.jsx
             return Inertia::render('Dashboard/ClientDashboard', [
                 'subscription' => $subscription,
                 'unpaid_invoice' => $unpaidInvoice,
             ]);
         }
 
-        // ---------------------------------------------------------------------
-        // 2. DASHBOARD TEKNISI
-        // ---------------------------------------------------------------------
+        // --- DASHBOARD TEKNISI ---
         if ($user->role === 'teknisi') {
             $teknisiId = $user->id;
-
             $taskStats = [
                 'assigned' => Task::where('technician_user_id', $teknisiId)->where('status', 'assigned')->count(),
                 'in_progress' => Task::where('technician_user_id', $teknisiId)->where('status', 'in_progress')->count(),
-                'completed_today' => Task::where('technician_user_id', $teknisiId)
-                    ->where('status', 'completed')
-                    ->whereDate('updated_at', Carbon::today())
-                    ->count(),
+                'completed_today' => Task::where('technician_user_id', $teknisiId)->where('status', 'completed')->whereDate('updated_at', Carbon::today())->count(),
             ];
+            $todayAttendance = Attendance::where('technician_user_id', $teknisiId)->whereDate('clock_in', Carbon::today())->first();
 
-            $todayAttendance = Attendance::where('technician_user_id', $teknisiId)
-                ->whereDate('clock_in', Carbon::today())
-                ->first();
-
-            $isClockedIn = $todayAttendance && !$todayAttendance->clock_out;
-
-            // PASTIKAN PATH INI SESUAI: resources/js/Pages/Dashboard/TeknisiDashboard.jsx
             return Inertia::render('Dashboard/TeknisiDashboard', [
                 'taskStats' => $taskStats,
                 'todayAttendance' => $todayAttendance ? [
                     'clock_in' => $todayAttendance->clock_in->timezone('Asia/Jakarta')->format('H:i'),
                     'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->timezone('Asia/Jakarta')->format('H:i') : null,
                 ] : null,
-                'isClockedIn' => $isClockedIn,
+                'isClockedIn' => $todayAttendance && !$todayAttendance->clock_out,
             ]);
         }
 
-        // ---------------------------------------------------------------------
-        // 3. DASHBOARD ADMIN
-        // ---------------------------------------------------------------------
+        // --- DASHBOARD ADMIN ---
         
+        // 1. Statistik Kartu
         $stats = [
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'pending_tasks' => Task::where('status', 'pending')->count(),
@@ -89,19 +66,22 @@ class DashboardController extends Controller
                 ->sum('amount'),
         ];
 
-        // Logika Grafik
-        $monthlyRevenue = array_fill(1, 12, 0);
+        // 2. Logika Grafik (PASTIKAN MENGGUNAKAN PAID_AT)
+        $monthlyRevenue = array_fill(1, 12, 0); // Array kosong Jan-Des
+
+        // Ambil data invoice LUNAS tahun ini yang punya tanggal bayar
         $invoices = Invoice::where('status', 'paid')
             ->whereYear('paid_at', Carbon::now()->year)
+            ->whereNotNull('paid_at')
             ->get();
 
         foreach ($invoices as $invoice) {
-            if ($invoice->paid_at) {
-                $monthNumber = $invoice->paid_at->month;
-                $monthlyRevenue[$monthNumber] += $invoice->amount;
-            }
+            // Karena di Model sudah dicasting datetime, kita bisa akses ->month
+            $monthNumber = $invoice->paid_at->month; 
+            $monthlyRevenue[$monthNumber] += $invoice->amount;
         }
 
+        // Format untuk Recharts / Frontend
         $chart = [];
         $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -112,6 +92,7 @@ class DashboardController extends Controller
             ];
         }
 
+        // [FIX PATH] Pastikan ini mengarah ke file di resources/js/Pages/Dashboard/AdminDashboard.jsx
         return Inertia::render('Dashboard/AdminDashboard', [
             'stats' => $stats,
             'chart' => $chart, 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Task;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -50,7 +49,7 @@ class PaymentVerificationController extends Controller
 
         DB::transaction(function () use ($request, $payment) {
             
-            // 1. Update Status Pembayaran
+            // 1. Update Tabel Payment
             $payment->update([
                 'status' => $request->status,
                 'rejection_reason' => $request->status === 'rejected' ? $request->rejection_reason : null,
@@ -61,7 +60,7 @@ class PaymentVerificationController extends Controller
             // 2. Jika DITERIMA (Verified)
             if ($request->status === 'verified') {
                 
-                // [PENTING] Set 'paid_at' ke waktu sekarang agar masuk grafik bulan ini
+                // [FIX UTAMA] Kita WAJIB mengisi 'paid_at' dengan 'now()'
                 $payment->invoice->update([
                     'status' => 'paid',
                     'paid_at' => now(), 
@@ -70,7 +69,6 @@ class PaymentVerificationController extends Controller
                 // Logika Pembuatan Tugas & Aktivasi Langganan
                 if ($payment->invoice->type === 'installation') {
                     
-                    // Aktifkan Langganan
                     if ($payment->invoice->subscription) {
                         $payment->invoice->subscription->update([
                             'status' => 'active',
@@ -95,13 +93,12 @@ class PaymentVerificationController extends Controller
                 }
 
             } elseif ($request->status === 'rejected') {
-                // Jika Ditolak
                 $payment->invoice->update([
                     'status' => 'overdue', 
                 ]);
             }
         });
 
-        return redirect()->back()->with('success', 'Status pembayaran diperbarui & Sistem telah diproses.');
+        return redirect()->back()->with('success', 'Pembayaran berhasil diproses.');
     }
 }

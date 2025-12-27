@@ -15,16 +15,16 @@ class Invoice extends Model
         'invoice_number',
         'amount',
         'status', // pending, paid, overdue
-        'type', // installation, monthly
+        'type',   // installation, monthly
         'due_date',
         'paid_at',
     ];
 
-    // [FIX] Tambahkan casts agar tanggal dibaca sebagai Carbon Object (Date)
+    // [PERBAIKAN KRISIAL] Casting ini WAJIB agar grafik bisa membaca bulan
     protected $casts = [
         'due_date' => 'date',
         'paid_at' => 'datetime',
-        'amount' => 'decimal:2',
+        'amount' => 'integer',
     ];
 
     public function user()
