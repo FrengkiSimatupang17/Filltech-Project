@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Invoice extends Model
 {
@@ -16,27 +14,31 @@ class Invoice extends Model
         'subscription_id',
         'invoice_number',
         'amount',
-        'status',
-        'type',
+        'status', // pending, paid, overdue
+        'type', // installation, monthly
         'due_date',
         'paid_at',
     ];
 
+    // [FIX] Tambahkan casts agar tanggal dibaca sebagai Carbon Object (Date)
     protected $casts = [
         'due_date' => 'date',
         'paid_at' => 'datetime',
+        'amount' => 'decimal:2',
     ];
 
-    /**
-     * Relasi yang hilang ada di sini.
-     */
-    public function payment(): HasOne
-    {
-        return $this->hasOne(Payment::class);
-    }
-
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function subscription()
+    {
+        return $this->belongsTo(Subscription::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
     }
 }

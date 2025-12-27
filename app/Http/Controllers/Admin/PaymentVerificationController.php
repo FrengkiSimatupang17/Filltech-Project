@@ -48,7 +48,6 @@ class PaymentVerificationController extends Controller
             'rejection_reason' => 'nullable|string|required_if:status,rejected',
         ]);
 
-        // Gunakan Transaksi Database agar Data Konsisten
         DB::transaction(function () use ($request, $payment) {
             
             // 1. Update Status Pembayaran
@@ -62,13 +61,13 @@ class PaymentVerificationController extends Controller
             // 2. Jika DITERIMA (Verified)
             if ($request->status === 'verified') {
                 
-                // A. Tandai Invoice LUNAS
+                // [PENTING] Set 'paid_at' ke waktu sekarang agar masuk grafik bulan ini
                 $payment->invoice->update([
                     'status' => 'paid',
-                    'paid_at' => now(),
+                    'paid_at' => now(), 
                 ]);
 
-                // B. [PENTING] Logika Pembuatan Tugas & Aktivasi Langganan
+                // Logika Pembuatan Tugas & Aktivasi Langganan
                 if ($payment->invoice->type === 'installation') {
                     
                     // Aktifkan Langganan
@@ -79,32 +78,24 @@ class PaymentVerificationController extends Controller
                         ]);
                     }
 
-                    // --- BUAT TUGAS INSTALASI OTOMATIS ---
-Task::create([
-    'client_user_id' => $payment->user_id,
-    'assigned_by_admin_id' => Auth::id(),
-    'title' => 'Instalasi Baru: ' . $payment->user->name,
-    'description' => 'Pemasangan paket internet baru. Segera hubungi pelanggan untuk jadwal.',
-    'type' => 'installation',
-    'status' => 'pending',
+                    // Buat Tugas Instalasi (Status Awal: Pending)
+                    Task::create([
+                        'client_user_id' => $payment->user_id,
+                        'assigned_by_admin_id' => Auth::id(),
+                        'title' => 'Instalasi Baru: ' . $payment->user->name,
+                        'description' => 'Pemasangan paket internet baru. Segera hubungi pelanggan untuk jadwal.',
+                        'type' => 'installation',
+                        'status' => 'pending', 
                     ]);
                 } 
                 elseif ($payment->invoice->type === 'monthly') {
-                    // Jika pembayaran bulanan, cukup perpanjang aktifasi (opsional)
                     if ($payment->invoice->subscription) {
                         $payment->invoice->subscription->update(['status' => 'active']);
                     }
                 }
 
-                // C. Kirim Notifikasi (Opsional - Bungkus try-catch agar tidak error SMTP)
-                try {
-                    // Logika kirim email/WA bisa ditaruh sini
-                } catch (\Exception $e) {
-                    // Biarkan lanjut meski notifikasi gagal
-                }
-
             } elseif ($request->status === 'rejected') {
-                // Jika Ditolak, kembalikan status invoice jadi pending/overdue
+                // Jika Ditolak
                 $payment->invoice->update([
                     'status' => 'overdue', 
                 ]);
