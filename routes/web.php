@@ -52,17 +52,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/complete', [ProfileController::class, 'edit'])->name('profile.complete');
 
-    // --- RUTE DARURAT PERBAIKAN DATA (STEP 1) ---
-    // Ditaruh disini agar bisa diakses admin meskipun profil belum lengkap
-    Route::get('/fix-data-grafik', function () {
-        // Cari semua invoice yg statusnya 'paid' TAPI tanggal bayarnya masih kosong
-        $affected = \App\Models\Invoice::where('status', 'paid')
-            ->whereNull('paid_at')
-            ->update(['paid_at' => now()]); // Isi paksa dengan tanggal hari ini
-            
-        return "Data diperbaiki: $affected transaksi. Silakan refresh dashboard.";
-    });
-
     // 2. GROUP YANG MEMBUTUHKAN DATA LENGKAP
     Route::middleware(['profile.complete'])->group(function () {
         
