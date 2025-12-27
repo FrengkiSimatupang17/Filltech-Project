@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PaymentVerificationController extends Controller
@@ -15,7 +19,6 @@ class PaymentVerificationController extends Controller
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                // Cari berdasarkan ID Transaksi (Payment ID) atau Invoice Number
                 $q->where('id', 'like', '%' . $request->search . '%')
                   ->orWhereHas('invoice', function ($inv) use ($request) {
                       $inv->where('invoice_number', 'like', '%' . $request->search . '%')
@@ -27,7 +30,6 @@ class PaymentVerificationController extends Controller
             });
         }
 
-        // Urutkan status 'pending' paling atas, lalu tanggal terbaru
         $payments = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->latest()
             ->paginate(10)
@@ -35,40 +37,80 @@ class PaymentVerificationController extends Controller
 
         return Inertia::render('Admin/Payments/Index', [
             'payments' => $payments,
-            // [FIX] Tambahkan baris ini agar error "filters undefined" hilang
-            'filters' => $request->only(['search']), 
+            'filters' => $request->only(['search']),
         ]);
     }
 
     public function update(Request $request, Payment $payment)
     {
-        // Validasi input
         $request->validate([
             'status' => 'required|in:verified,rejected',
             'rejection_reason' => 'nullable|string|required_if:status,rejected',
         ]);
 
-        $data = $request->only(['status', 'rejection_reason']);
-
-        // Update status pembayaran
-        $payment->update($data);
-
-        // Update status invoice terkait
-        if ($request->status === 'verified') {
-            $payment->invoice->update([
-                'status' => 'paid',
-                'payment_status' => 'verified', // Pastikan kolom ini ada di migration invoice
-                'paid_at' => now(),
+        // Gunakan Transaksi Database agar Data Konsisten
+        DB::transaction(function () use ($request, $payment) {
+            
+            // 1. Update Status Pembayaran
+            $payment->update([
+                'status' => $request->status,
+                'rejection_reason' => $request->status === 'rejected' ? $request->rejection_reason : null,
+                'verified_at' => now(),
+                'verified_by_admin_id' => Auth::id(),
             ]);
 
-            // Di sini bisa ditambahkan logika untuk mengaktifkan Subscription user
-            // $payment->invoice->subscription->update(['status' => 'active']);
-        } elseif ($request->status === 'rejected') {
-            $payment->invoice->update([
-                'payment_status' => 'failed',
-            ]);
-        }
+            // 2. Jika DITERIMA (Verified)
+            if ($request->status === 'verified') {
+                
+                // A. Tandai Invoice LUNAS
+                $payment->invoice->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
 
-        return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui.');
+                // B. [PENTING] Logika Pembuatan Tugas & Aktivasi Langganan
+                if ($payment->invoice->type === 'installation') {
+                    
+                    // Aktifkan Langganan
+                    if ($payment->invoice->subscription) {
+                        $payment->invoice->subscription->update([
+                            'status' => 'active',
+                            'activated_at' => now(),
+                        ]);
+                    }
+
+                    // --- BUAT TUGAS INSTALASI OTOMATIS ---
+                    Task::create([
+                        'client_user_id' => $payment->user_id,
+                        'assigned_by_admin_id' => Auth::id(),
+                        'title' => 'Instalasi Baru: ' . $payment->user->name,
+                        'description' => 'Pemasangan paket internet baru. Segera hubungi pelanggan untuk jadwal.',
+                        'type' => 'installation',
+                        'status' => 'assigned', // Status awal 'assigned' agar muncul di dashboard admin/teknisi
+                    ]);
+                } 
+                elseif ($payment->invoice->type === 'monthly') {
+                    // Jika pembayaran bulanan, cukup perpanjang aktifasi (opsional)
+                    if ($payment->invoice->subscription) {
+                        $payment->invoice->subscription->update(['status' => 'active']);
+                    }
+                }
+
+                // C. Kirim Notifikasi (Opsional - Bungkus try-catch agar tidak error SMTP)
+                try {
+                    // Logika kirim email/WA bisa ditaruh sini
+                } catch (\Exception $e) {
+                    // Biarkan lanjut meski notifikasi gagal
+                }
+
+            } elseif ($request->status === 'rejected') {
+                // Jika Ditolak, kembalikan status invoice jadi pending/overdue
+                $payment->invoice->update([
+                    'status' => 'overdue', 
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Status pembayaran diperbarui & Sistem telah diproses.');
     }
 }
