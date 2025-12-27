@@ -80,13 +80,13 @@ class PaymentVerificationController extends Controller
                     }
 
                     // --- BUAT TUGAS INSTALASI OTOMATIS ---
-                    Task::create([
-                        'client_user_id' => $payment->user_id,
-                        'assigned_by_admin_id' => Auth::id(),
-                        'title' => 'Instalasi Baru: ' . $payment->user->name,
-                        'description' => 'Pemasangan paket internet baru. Segera hubungi pelanggan untuk jadwal.',
-                        'type' => 'installation',
-                        'status' => 'assigned', // Status awal 'assigned' agar muncul di dashboard admin/teknisi
+Task::create([
+    'client_user_id' => $payment->user_id,
+    'assigned_by_admin_id' => Auth::id(),
+    'title' => 'Instalasi Baru: ' . $payment->user->name,
+    'description' => 'Pemasangan paket internet baru. Segera hubungi pelanggan untuk jadwal.',
+    'type' => 'installation',
+    'status' => 'pending',
                     ]);
                 } 
                 elseif ($payment->invoice->type === 'monthly') {
