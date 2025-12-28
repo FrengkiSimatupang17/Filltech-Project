@@ -6,8 +6,13 @@ import RevenueChart from '@/Components/Dashboard/RevenueChart';
 import { FaWallet, FaClipboardCheck, FaUserPlus, FaTasks, FaWifi, FaUsers } from 'react-icons/fa';
 
 export default function AdminDashboard({ auth, stats, chart }) {
+    
     const formatRupiah = (number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(number);
     };
 
     return (
@@ -19,6 +24,7 @@ export default function AdminDashboard({ auth, stats, chart }) {
 
             <div className="py-8">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    
                     {/* Welcome Banner */}
                     <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-2xl p-8 mb-8 text-white shadow-lg relative overflow-hidden">
                         <div className="relative z-10">
@@ -36,6 +42,7 @@ export default function AdminDashboard({ auth, stats, chart }) {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
                         {/* Quick Actions */}
                         <div className="lg:col-span-1 flex flex-col gap-6">
                             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
@@ -75,8 +82,8 @@ export default function AdminDashboard({ auth, stats, chart }) {
                                         <p className="text-sm text-gray-400 mt-1">Tren pemasukan tahun ini</p>
                                     </div>
                                 </div>
-                                {/* [FIX] Class h-80 memberikan tinggi pasti agar Recharts tidak error */}
                                 <div className="w-full h-80">
+                                    {/* Component Grafik menerima data={chart} */}
                                     <RevenueChart data={chart} />
                                 </div>
                             </div>

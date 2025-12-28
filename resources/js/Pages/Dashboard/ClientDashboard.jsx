@@ -19,9 +19,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 // --- KOMPONEN GRAFIK REALTIME (SIMULASI) ---
-// Ini menampilkan efek grafik jalan tanpa perlu library tambahan
 const RealtimeTrafficWidget = () => {
-    const [dataPoints, setDataPoints] = useState(Array(20).fill(5)); // Data awal
+    const [dataPoints, setDataPoints] = useState(Array(20).fill(5));
     const [currentSpeed, setCurrentSpeed] = useState(0);
 
     useEffect(() => {
@@ -34,7 +33,7 @@ const RealtimeTrafficWidget = () => {
                 const newData = [...prev.slice(1), newPoint];
                 return newData;
             });
-        }, 1000); // Update setiap 1 detik
+        }, 1000); 
 
         return () => clearInterval(interval);
     }, []);
@@ -105,7 +104,11 @@ const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
     
     const formatRupiah = (amount) => `Rp ${parseFloat(amount).toLocaleString('id-ID')}`;
     const hasUnpaidInvoice = !!unpaidInvoice;
-    const waLink = `https://wa.me/6281234567890?text=Halo%20CS%20Filltech,%20saya%20pelanggan%20ID:%20${auth.user.id_unik}%20butuh%20bantuan.`;
+    
+    // Fallback jika id_unik null/undefined
+    const userIdDisplay = auth.user.id_unik || `ID-${auth.user.id}`;
+    
+    const waLink = `https://wa.me/6281234567890?text=Halo%20CS%20Filltech,%20saya%20pelanggan%20ID:%20${userIdDisplay}%20butuh%20bantuan.`;
 
     return (
         <div className="space-y-6">
@@ -134,7 +137,9 @@ const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusBadge(subscription.status)} bg-white/90`}>
                                 {subscription.status.replace('_', ' ')}
                             </span>
-                            <span className="text-xs text-blue-200 font-mono bg-black/20 px-2 py-1 rounded">ID: {auth.user.id_unik}</span>
+                            <span className="text-xs text-blue-200 font-mono bg-black/20 px-2 py-1 rounded">
+                                ID: {userIdDisplay}
+                            </span>
                         </div>
                     </div>
                 </div>
