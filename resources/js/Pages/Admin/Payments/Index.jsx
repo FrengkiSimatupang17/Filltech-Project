@@ -40,7 +40,8 @@ const StatusBadge = ({ status }) => {
 export default function PaymentIndex({ auth, payments, filters = {} }) {
     const [search, setSearch] = useState(filters?.search || '');
     const [selectedPayment, setSelectedPayment] = useState(null);
-    
+    const [processing, setProcessing] = useState(false); // Manual loading state
+
     // State Modal
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showApproveModal, setShowApproveModal] = useState(false);
@@ -48,7 +49,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
     const [toastMessage, setToastMessage] = useState(null);
 
     // useForm hanya digunakan untuk menampung inputan rejection_reason
-    const { data, setData, processing, reset } = useForm({
+    const { data, setData, reset } = useForm({
         rejection_reason: '',
     });
 
@@ -69,6 +70,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
     };
 
     const copyToClipboard = (text, label) => {
+        if (!text) return;
         navigator.clipboard.writeText(text);
         setToastMessage(`${label} berhasil disalin!`);
     };
@@ -88,11 +90,13 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
         setShowApproveModal(true);
     };
 
-    // Menggunakan router.patch agar data terkirim dengan benar
+    // Submit Approve (Terima)
     const submitApprove = () => {
         router.patch(route('admin.payments.update', selectedPayment.id), {
             status: 'verified' 
         }, {
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
             onSuccess: () => {
                 setShowApproveModal(false);
                 closeModal();
@@ -105,13 +109,19 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
         setShowRejectModal(true);
     };
 
+    // Submit Reject (Tolak)
     const submitReject = (e) => {
         e.preventDefault();
         router.patch(route('admin.payments.update', selectedPayment.id), {
             status: 'rejected',
             rejection_reason: data.rejection_reason
         }, {
-            onSuccess: () => closeModal(),
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => {
+                closeModal();
+                setToastMessage("Pembayaran ditolak ❌");
+            },
         });
     };
 
@@ -130,7 +140,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
                         <form onSubmit={handleSearch} className="flex w-full md:w-1/2 gap-2">
                             <input
                                 type="text"
-                                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                                 placeholder="Cari ID, Nama Klien, atau Invoice..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -174,11 +184,12 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
                                                             <button 
                                                                 onClick={() => copyToClipboard(payment.invoice?.invoice_number, 'No. Invoice')}
                                                                 className="text-gray-400 hover:text-indigo-600"
+                                                                title="Salin No Invoice"
                                                             >
                                                                 <FaCopy size={12} />
                                                             </button>
                                                         </div>
-                                                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full mt-1 inline-block">
+                                                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full mt-1 inline-block border border-gray-200">
                                                             {payment.invoice?.type === 'installation' ? 'Instalasi' : 'Bulanan'}
                                                         </span>
                                                     </td>
@@ -229,7 +240,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
                                             <button 
                                                 onClick={() => openVerifyModal(payment)}
-                                                className="w-full flex justify-center items-center py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-md hover:bg-indigo-100 text-sm border border-indigo-200"
+                                                className="w-full flex justify-center items-center py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-md hover:bg-indigo-100 text-sm border border-indigo-200 transition"
                                             >
                                                 <FaEye className="mr-2" />
                                                 {payment.status === 'pending' ? 'Verifikasi Pembayaran' : 'Lihat Detail'}
@@ -252,7 +263,6 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
             {/* --- MODAL DETAIL PEMBAYARAN --- */}
             <Modal show={!!selectedPayment && !showRejectModal && !showApproveModal} onClose={closeModal} maxWidth="4xl">
-                {/* [FIX] focusable container added */}
                 <div className="flex flex-col h-full md:h-auto" tabIndex={0}>
                     <div className="p-4 md:p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
                         <h2 className="text-lg md:text-xl font-bold text-gray-900">Detail Pembayaran</h2>
@@ -261,19 +271,22 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
                     <div className="p-4 md:p-6 overflow-y-auto" style={{ maxHeight: '80vh' }}>
                         <div className="flex flex-col md:flex-row gap-6">
+                            {/* Kiri: Gambar */}
                             <div className="w-full md:w-1/2 bg-gray-100 rounded-lg flex items-center justify-center p-2 border border-gray-200 min-h-[250px] md:min-h-[400px]">
                                 {selectedPayment?.payment_proof_path ? (
                                     <img 
                                         src={`/storage/${selectedPayment.payment_proof_path}`} 
                                         alt="Bukti Transfer" 
-                                        className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm cursor-pointer"
+                                        className="max-w-full max-h-[400px] object-contain rounded-md shadow-sm cursor-pointer hover:opacity-95 transition"
                                         onClick={() => window.open(`/storage/${selectedPayment.payment_proof_path}`, '_blank')}
+                                        title="Klik untuk memperbesar"
                                     />
                                 ) : (
                                     <p className="text-gray-500 italic">File tidak ditemukan</p>
                                 )}
                             </div>
 
+                            {/* Kanan: Info */}
                             <div className="w-full md:w-1/2 space-y-4">
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                     <p className="text-xs text-blue-600 font-bold uppercase">Nominal Ditransfer</p>
@@ -314,12 +327,13 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
                                     
                                     {selectedPayment?.status === 'pending' && (
                                         <>
-                                            <DangerButton className="justify-center py-3 w-full" onClick={openRejectModal}>
+                                            <DangerButton className="justify-center py-3 w-full" onClick={openRejectModal} disabled={processing}>
                                                 <FaTimes className="mr-2" /> Tolak
                                             </DangerButton>
                                             <PrimaryButton 
                                                 className="justify-center py-3 w-full bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800" 
                                                 onClick={openApproveModal} 
+                                                disabled={processing}
                                             >
                                                 <FaCheck className="mr-2" /> Terima
                                             </PrimaryButton>
@@ -334,7 +348,6 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
             {/* --- MODAL KONFIRMASI TERIMA (VALID) --- */}
             <Modal show={showApproveModal} onClose={() => setShowApproveModal(false)} maxWidth="sm">
-                {/* [FIX] focusable container added */}
                 <div className="p-6 text-center" tabIndex={0}>
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 animate-bounce-short">
                         <FaCheckCircle className="h-8 w-8 text-green-600" />
@@ -352,7 +365,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
                             onClick={submitApprove} 
                             disabled={processing}
                         >
-                            Ya, Valid
+                            {processing ? 'Memproses...' : 'Ya, Valid'}
                         </PrimaryButton>
                     </div>
                 </div>
@@ -360,7 +373,6 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
             {/* --- MODAL TOLAK --- */}
             <Modal show={showRejectModal} onClose={() => setShowRejectModal(false)} maxWidth="md">
-                {/* [FIX] focusable container added */}
                 <form onSubmit={submitReject} className="p-6" tabIndex={0}>
                     <div className="text-center mb-4">
                          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
@@ -375,7 +387,7 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
                     
                     <div className="mb-6">
                         <textarea
-                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 p-3 text-sm"
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 p-3 text-sm text-gray-900"
                             rows="4"
                             placeholder="Contoh: Bukti transfer buram, nominal tidak sesuai, dll."
                             value={data.rejection_reason}
@@ -386,7 +398,9 @@ export default function PaymentIndex({ auth, payments, filters = {} }) {
 
                     <div className="flex flex-col-reverse md:flex-row justify-end gap-3">
                         <SecondaryButton className="justify-center w-full" onClick={() => setShowRejectModal(false)}>Batal</SecondaryButton>
-                        <DangerButton className="justify-center w-full" disabled={processing}>Konfirmasi Tolak</DangerButton>
+                        <DangerButton className="justify-center w-full" disabled={processing}>
+                            {processing ? 'Memproses...' : 'Konfirmasi Tolak'}
+                        </DangerButton>
                     </div>
                 </form>
             </Modal>

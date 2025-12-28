@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule; // Tambahkan ini agar Scheduler aktif
 
 /*
 |--------------------------------------------------------------------------
@@ -17,3 +18,8 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// --- JANTUNG OTOMATISASI TAGIHAN ---
+// Menjalankan pengecekan tagihan bulanan setiap hari jam 01:00 pagi.
+// Tanpa baris ini, fitur tagihan otomatis TIDAK AKAN JALAN.
+Schedule::command('billing:generate-monthly')->dailyAt('01:00');
