@@ -10,56 +10,43 @@ use Inertia\Inertia;
 
 class InvoiceController extends Controller
 {
-    /**
-     * Menampilkan daftar tagihan milik user yang sedang login.
-     */
     public function index()
     {
-        // [KEAMANAN 1] Ambil invoice HANYA yang 'user_id'-nya sama dengan Auth::id()
+        // Ambil data Invoice milik user
         $invoices = Invoice::where('user_id', Auth::id())
-            ->with(['subscription.package']) // Load data relasi paket agar bisa tampil nama paketnya
+            ->with(['subscription.package', 'payment']) // Load relasi payment
             ->orderBy('created_at', 'desc')
-            ->paginate(10); // Gunakan pagination agar halaman tidak berat
+            ->paginate(10)
+            ->through(function ($invoice) {
+                // --- BAGIAN INI YANG PENTING ---
+                // Kita merapikan data agar Frontend mudah membacanya
+                return [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'type' => $invoice->type,
+                    'amount' => $invoice->amount,
+                    'status' => $invoice->status, // status invoice (pending/paid)
+                    'due_date' => $invoice->due_date ? $invoice->due_date->translatedFormat('d M Y') : '-',
+                    'payment_status' => $invoice->payment ? $invoice->payment->status : null,
+                ];
+                // -------------------------------
+            });
 
         return Inertia::render('Client/Invoices/Index', [
             'invoices' => $invoices,
         ]);
     }
 
-    /**
-     * Menampilkan detail satu tagihan spesifik.
-     * (Jika Anda nanti menambahkan fitur "Lihat Detail Invoice")
-     */
     public function show($id)
     {
-        // [KEAMANAN 2 - KRUSIAL] Proteksi IDOR
-        // Jangan gunakan Invoice::find($id)! Itu membuat data bocor.
-        // Gunakan where('user_id', Auth::id()) untuk memastikan kepemilikan.
-        
+        // Kode standar untuk detail, tidak perlu diubah yang aneh-aneh
         $invoice = Invoice::with(['subscription.package', 'payment'])
             ->where('id', $id)
-            ->where('user_id', Auth::id()) // <--- INI KUNCI KEAMANANNYA
-            ->firstOrFail(); // Jika bukan miliknya, akan otomatis error 404 Not Found
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
         return Inertia::render('Client/Invoices/Show', [
             'invoice' => $invoice,
         ]);
-    }
-
-    /**
-     * (Opsional) Fitur Cetak PDF
-     */
-    public function print($id)
-    {
-        $invoice = Invoice::with(['user', 'subscription.package'])
-            ->where('id', $id)
-            ->where('user_id', Auth::id()) // <--- Proteksi IDOR juga disini
-            ->firstOrFail();
-
-        // Logika cetak PDF (jika Anda menggunakan dompdf/browsershot)
-        // return view('invoices.pdf', compact('invoice'));
-        
-        // Sementara return data saja jika belum ada view PDF
-        return response()->json($invoice);
     }
 }
