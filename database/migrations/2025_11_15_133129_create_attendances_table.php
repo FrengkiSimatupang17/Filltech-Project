@@ -6,17 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::create('attendances', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('technician_user_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamp('clock_in');
-            $table->timestamp('clock_out')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
-    }
+public function up()
+{
+    Schema::create('attendances', function (Blueprint $table) {
+        $table->id();
+        // GUNAKAN user_id AGAR STANDAR
+        $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); 
+        $table->date('date');
+        $table->time('clock_in');
+        $table->time('clock_out')->nullable();
+        $table->string('status')->default('present');
+        $table->text('notes')->nullable();
+        // Latitude/Longitude untuk fitur GPS baru
+        $table->string('latitude')->nullable(); 
+        $table->string('longitude')->nullable();
+        $table->timestamps();
+    });
+}
 
     public function down(): void
     {

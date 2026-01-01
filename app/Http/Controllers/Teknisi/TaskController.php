@@ -4,74 +4,81 @@ namespace App\Http\Controllers\Teknisi;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
+use App\Models\ActivityLog; // [WAJIB] Import untuk Audit Trail
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $query = Task::with('client')
-            ->where('technician_user_id', Auth::id());
-
-        if ($request->has('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('client', function ($sq) use ($request) {
-                      $sq->where('name', 'like', '%' . $request->search . '%')
-                         ->orWhere('alamat', 'like', '%' . $request->search . '%')
-                         ->orWhere('nomor_rumah', 'like', '%' . $request->search . '%');
-                  });
-            });
-        }
-
-        if ($request->has('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        $tasks = $query->orderByRaw("CASE WHEN status = 'assigned' THEN 1 WHEN status = 'in_progress' THEN 2 ELSE 3 END")
-            ->orderBy('updated_at', 'desc')
-            ->paginate(10)
-            ->withQueryString()
-            ->through(fn ($task) => [
-                'id' => $task->id,
-                'title' => $task->title,
-                'description' => $task->description,
-                'type' => $task->type,
-                'status' => $task->status,
-                'client_name' => $task->client ? $task->client->name : 'Klien Dihapus',
-                'client_address' => $task->client ? $task->client->address_detail : '-', 
-                'client_phone' => $task->client ? $task->client->phone_number : '-',
-                'created_at' => $task->created_at->translatedFormat('d M Y'),
-            ]);
+        // Ambil tugas KHUSUS milik teknisi yang sedang login
+        // Menggunakan kolom 'technician_user_id' sesuai struktur database Anda
+        $tasks = Task::where('technician_user_id', Auth::id())
+            ->with('client') // Pastikan relasi 'client' ada di model Task
+            ->orderByRaw("CASE 
+                WHEN status = 'assigned' THEN 1 
+                WHEN status = 'in_progress' THEN 2 
+                ELSE 3 END")
+            ->latest()
+            ->get();
 
         return Inertia::render('Teknisi/Tasks/Index', [
-            'tasks' => $tasks,
-            'filters' => $request->only(['search', 'status']),
+            'tasks' => $tasks
         ]);
     }
 
     public function update(Request $request, Task $task)
     {
+        // 1. Keamanan: Pastikan teknisi hanya bisa update tugas miliknya
         if ($task->technician_user_id !== Auth::id()) {
-            abort(403);
+            abort(403, 'Anda tidak memiliki akses ke tugas ini.');
         }
 
-        $request->validate([
-            'status' => ['required', Rule::in(['in_progress', 'completed'])],
+        // 2. Validasi Input
+        $validated = $request->validate([
+            'status' => 'required|in:in_progress,completed',
+            'description' => 'nullable|string', // Menggunakan 'description' bukan 'notes'
+            'evidence' => 'nullable|image|max:5120', // Foto max 5MB
         ]);
 
-        $taskData = ['status' => $request->status];
+        $data = [
+            'status' => $validated['status'],
+        ];
 
-        if ($request->status === 'completed') {
-            $taskData['completed_at'] = now();
+        // 3. Logic Append Catatan (Menambahkan catatan baru ke deskripsi lama)
+        if ($request->filled('description')) {
+            $timestamp = now()->format('d/m H:i');
+            $newNote = "[Update {$timestamp}]: " . $validated['description'];
+            // Jika deskripsi lama ada, tambahkan baris baru. Jika tidak, langsung isi.
+            $data['description'] = $task->description ? ($task->description . "\n\n" . $newNote) : $newNote;
         }
 
-        $task->update($taskData);
+        // 4. Handle Upload Foto Bukti
+        if ($request->hasFile('evidence')) {
+            // Hapus foto lama jika ada (menggunakan kolom evidence_photo_path)
+            if ($task->evidence_photo_path) {
+                Storage::disk('public')->delete($task->evidence_photo_path);
+            }
+            
+            $path = $request->file('evidence')->store('task-evidence', 'public');
+            $data['evidence_photo_path'] = $path;
+        }
 
-        return Redirect::route('teknisi.tasks.index')->with('success', 'Status tugas berhasil diperbarui.');
+        // 5. Update Data Tugas
+        $task->update($data);
+
+        // 6. [WAJIB] Simpan Activity Log untuk Admin
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'update_task',
+            'event' => 'update',
+            'description' => "Teknisi " . Auth::user()->name . " mengubah status tugas '{$task->title}' menjadi " . strtoupper($validated['status']),
+            'ip_address' => $request->ip(),
+        ]);
+
+        return redirect()->back()->with('success', 'Status tugas berhasil diperbarui.');
     }
 }

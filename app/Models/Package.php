@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Package extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -18,14 +18,6 @@ class Package extends Model
         'price',
         'description',
     ];
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['name', 'price', 'speed', 'description'])
-            ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $eventName) => "Paket {$this->name} telah {$eventName}");
-    }
 
     public function subscriptions(): HasMany
     {

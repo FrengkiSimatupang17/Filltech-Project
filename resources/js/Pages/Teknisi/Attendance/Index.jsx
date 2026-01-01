@@ -1,243 +1,163 @@
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router } from '@inertiajs/react';
-import PrimaryButton from '@/Components/PrimaryButton';
-import DangerButton from '@/Components/DangerButton';
-import EmptyState from '@/Components/EmptyState';
-import Pagination from '@/Components/Pagination';
-import LoadingOverlay from '@/Components/LoadingOverlay';
-import { FaCheckCircle, FaTimesCircle, FaCalendarAlt, FaHourglassEnd, FaUserClock, FaMapMarkerAlt } from 'react-icons/fa';
-import { useState } from 'react';
+import { Head, useForm } from '@inertiajs/react';
+import { MapPinIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
-const HistoryCard = ({ att }) => (
-    <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-        <div className="flex justify-between items-center mb-2">
-            <h4 className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                <FaCalendarAlt className="text-blue-500" /> {att.date}
-            </h4>
-            {att.clock_out !== '-' ? (
-                <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">Selesai</span>
-            ) : (
-                <span className="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">Belum Selesai</span>
-            )}
-        </div>
-        <div className="text-xs text-gray-600 space-y-1 border-t pt-2 mt-2">
-            <div className="flex justify-between">
-                <span className="text-gray-400 flex items-center gap-1"><FaCheckCircle /> Masuk:</span>
-                <span className="font-semibold text-gray-700">{att.clock_in}</span>
-            </div>
-            <div className="flex justify-between">
-                <span className="text-gray-400 flex items-center gap-1"><FaHourglassEnd /> Keluar:</span>
-                <span className="font-semibold text-gray-700">{att.clock_out}</span>
-            </div>
-        </div>
-    </div>
-);
-
-export default function Index({ auth, isClockedIn, todayAttendance, history }) {
-    const [processing, setProcessing] = useState(false);
+export default function Index({ auth, todayAttendance, history, officeLocation }) {
+    const [locating, setLocating] = useState(false);
     const [locationError, setLocationError] = useState(null);
 
-    // Koordinat Kantor PT Filltech Berkah Bersama (Sagulung, Batam)
-    const OFFICE_LAT = 1.0427411;
-    const OFFICE_LNG = 103.9455038;
-    const MAX_RADIUS_METERS = 100; 
+    const { data, setData, post, processing, errors } = useForm({
+        latitude: '',
+        longitude: '',
+        type: 'clock_in', // default
+    });
 
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371e3; // Radius bumi (meter)
-        const φ1 = lat1 * Math.PI / 180;
-        const φ2 = lat2 * Math.PI / 180;
-        const Δφ = (lat2 - lat1) * Math.PI / 180;
-        const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c; 
-    };
-
-    const handleClock = () => {
-        const action = isClockedIn ? 'Clock-Out' : 'Clock-In';
+    const handleAttendance = (type) => {
+        setLocating(true);
         setLocationError(null);
 
-        if (!confirm(`Anda yakin ingin melakukan ${action} sekarang? Pastikan Anda berada di kantor.`)) return;
-
         if (!navigator.geolocation) {
-            alert("Browser Anda tidak mendukung fitur lokasi.");
+            setLocationError("Browser Anda tidak mendukung Geolocation.");
+            setLocating(false);
             return;
         }
 
-        setProcessing(true);
-
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                const { latitude, longitude } = position.coords;
-                const distance = calculateDistance(latitude, longitude, OFFICE_LAT, OFFICE_LNG);
-
-                // Validasi Jarak di Frontend
-                if (distance > MAX_RADIUS_METERS) {
-                    setProcessing(false);
-                    const msg = `Gagal! Anda berada ${Math.round(distance)}m dari kantor. (Maksimal ${MAX_RADIUS_METERS}m)`;
-                    setLocationError(msg);
-                    alert(msg);
-                    return;
-                }
-
-                // Kirim ke Backend
-                router.post(route('teknisi.attendance.store'), {
-                    latitude: latitude,
-                    longitude: longitude
-                }, {
-                    preserveScroll: true,
-                    onSuccess: () => setProcessing(false),
-                    onError: (errors) => {
-                        setProcessing(false);
-                        if (errors.location) {
-                            setLocationError(errors.location);
-                            alert(errors.location);
-                        }
-                    }
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Set data dan kirim
+                setData({ ...data, latitude: lat, longitude: lng, type: type });
+                
+                // Gunakan helper form Inertia untuk post manual agar state terupdate dulu
+                // Note: Karena setData async, lebih aman passing payload langsung ke post
+                post(route('teknisi.attendance.store'), {
+                    data: { latitude: lat, longitude: lng, type: type },
+                    onFinish: () => setLocating(false)
                 });
             },
             (error) => {
-                setProcessing(false);
-                let msg = "Gagal mengambil lokasi.";
-                // Penanganan Error Izin
-                if (error.code === 1) msg = "Izin lokasi ditolak. Mohon izinkan akses lokasi di pengaturan browser.";
-                else if (error.code === 2) msg = "Sinyal GPS tidak tersedia.";
-                else if (error.code === 3) msg = "Waktu permintaan lokasi habis.";
-                
-                setLocationError(msg);
-                alert(msg);
+                console.error(error);
+                setLocationError("Gagal mengambil lokasi. Pastikan GPS aktif.");
+                setLocating(false);
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    };
-
-    const StatusDisplay = () => {
-        if (isClockedIn) {
-            return (
-                <>
-                    <p className="text-xl font-semibold text-green-600 flex items-center gap-2 justify-center md:justify-start">
-                        <FaCheckCircle /> ANDA SUDAH CLOCK-IN
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">Masuk Pukul: {todayAttendance.clock_in}</p>
-                </>
-            );
-        }
-        
-        if (todayAttendance?.clock_out) {
-            return (
-                <>
-                    <p className="text-xl font-semibold text-gray-700 flex items-center gap-2 justify-center md:justify-start">
-                        <FaUserClock /> ABSENSI HARI INI SELESAI
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Masuk: {todayAttendance.clock_in} | Keluar: {todayAttendance.clock_out}
-                    </p>
-                </>
-            );
-        }
-
-        return (
-            <p className="text-xl font-semibold text-red-600 flex items-center gap-2 justify-center md:justify-start">
-                <FaTimesCircle /> ANDA BELUM CLOCK-IN
-            </p>
+            { enableHighAccuracy: true } // Wajib presisi tinggi
         );
     };
 
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Absensi Harian</h2>}
+            header={<h2 className="font-semibold text-xl text-gray-800">Absensi Harian</h2>}
         >
             <Head title="Absensi" />
-            
-            <LoadingOverlay show={processing} message="Memverifikasi Lokasi..." />
 
-            <div className="py-6 sm:py-12 bg-gray-50 min-h-screen">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+            <div className="py-6 bg-gray-50 min-h-screen">
+                <div className="max-w-lg mx-auto px-4">
                     
-                    {/* SECTION 1: STATUS */}
-                    <div className="bg-white overflow-hidden shadow-xl sm:rounded-lg border border-gray-200">
-                        <div className="p-6 text-gray-900">
-                            <h3 className="text-lg font-bold border-b pb-3 mb-4 flex justify-between items-center">
-                                Status Kehadiran
-                                <span className="text-xs font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 flex items-center gap-1">
-                                    <FaMapMarkerAlt /> Lokasi Terkunci
-                                </span>
-                            </h3>
-                            
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                                <div className="w-full text-center md:text-left">
-                                    <StatusDisplay />
-                                    {locationError && (
-                                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 font-medium">
-                                            ⚠️ {locationError}
-                                        </div>
-                                    )}
+                    {/* STATUS CARD */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center mb-6">
+                        <p className="text-gray-500 text-sm font-bold uppercase mb-1">Status Hari Ini</p>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                            {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </h3>
+                        
+                        {todayAttendance ? (
+                            <div className="flex justify-center gap-4 mt-4">
+                                <div className="bg-green-50 p-3 rounded-xl border border-green-100 w-1/2">
+                                    <p className="text-xs text-green-600 font-bold uppercase">Masuk</p>
+                                    <p className="text-xl font-mono font-bold text-green-800">
+                                        {todayAttendance.clock_in ? new Date(todayAttendance.clock_in).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : '-'}
+                                    </p>
                                 </div>
-                                
-                                <div className="w-full md:w-auto flex justify-center md:justify-end">
-                                    {isClockedIn ? (
-                                        <DangerButton onClick={handleClock} className="w-full md:w-auto justify-center h-12 text-base" disabled={processing}>
-                                            Clock-Out Sekarang
-                                        </DangerButton>
-                                    ) : (
-                                        !todayAttendance?.clock_out && (
-                                            <PrimaryButton onClick={handleClock} className="w-full md:w-auto justify-center h-12 text-base" disabled={processing}>
-                                                Clock-In Sekarang
-                                            </PrimaryButton>
-                                        )
-                                    )}
+                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 w-1/2">
+                                    <p className="text-xs text-orange-600 font-bold uppercase">Pulang</p>
+                                    <p className="text-xl font-mono font-bold text-orange-800">
+                                        {todayAttendance.clock_out ? new Date(todayAttendance.clock_out).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : '-'}
+                                    </p>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="mt-4 bg-gray-100 py-2 rounded-lg text-gray-500 text-sm font-medium">
+                                Belum Absen Masuk
+                            </div>
+                        )}
                     </div>
 
-                    {/* SECTION 2: RIWAYAT */}
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
-                        <div className="p-6 text-gray-900 border-b bg-gray-50/50">
-                            <h3 className="text-lg font-bold">Riwayat 30 Hari Terakhir</h3>
+                    {/* ERROR MESSAGE */}
+                    {(locationError || errors.location) && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-start gap-3">
+                            <ExclamationTriangleIcon className="w-6 h-6 flex-shrink-0" />
+                            <p className="text-sm font-medium">{locationError || errors.location}</p>
                         </div>
+                    )}
 
-                        <div className="p-4 sm:p-6">
-                            {history.data.length > 0 ? (
-                                <>
-                                    <div className="hidden md:block overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-50">
-                                                <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Masuk</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keluar</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                {history.data.map((att) => (
-                                                    <tr key={att.id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{att.date}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-mono">{att.clock_in}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-mono">{att.clock_out}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="md:hidden space-y-3">
-                                        {history.data.map(att => <HistoryCard key={att.id} att={att} />)}
-                                    </div>
-                                    <div className="mt-6">
-                                        <Pagination links={history.links} />
-                                    </div>
-                                </>
-                            ) : (
-                                <EmptyState title="Belum Ada Data" message="Riwayat absensi Anda masih kosong." />
-                            )}
-                        </div>
+                    {/* ACTION BUTTONS */}
+                    <div className="grid grid-cols-1 gap-4 mb-8">
+                        {!todayAttendance && (
+                            <button
+                                onClick={() => handleAttendance('clock_in')}
+                                disabled={locating || processing}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 transition transform active:scale-95"
+                            >
+                                {locating ? (
+                                    <span className="animate-pulse">Mencari Lokasi...</span>
+                                ) : (
+                                    <>
+                                        <MapPinIcon className="w-6 h-6" /> ABSEN MASUK
+                                    </>
+                                )}
+                            </button>
+                        )}
+
+                        {todayAttendance && !todayAttendance.clock_out && (
+                            <button
+                                onClick={() => handleAttendance('clock_out')}
+                                disabled={locating || processing}
+                                className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-orange-200 flex items-center justify-center gap-3 transition transform active:scale-95"
+                            >
+                                {locating ? (
+                                    <span className="animate-pulse">Mencari Lokasi...</span>
+                                ) : (
+                                    <>
+                                        <ClockIcon className="w-6 h-6" /> ABSEN PULANG
+                                    </>
+                                )}
+                            </button>
+                        )}
+                        
+                        {todayAttendance && todayAttendance.clock_out && (
+                            <div className="text-center text-green-600 font-bold p-4 bg-green-50 rounded-xl border border-green-200">
+                                Anda sudah menyelesaikan absensi hari ini.
+                            </div>
+                        )}
                     </div>
 
+                    {/* HISTORY LIST */}
+                    <div>
+                        <h4 className="font-bold text-gray-700 mb-3 ml-1">Riwayat 5 Hari Terakhir</h4>
+                        <div className="space-y-3">
+                            {history.map((att) => (
+                                <div key={att.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold text-gray-900">
+                                            {new Date(att.date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                            Masuk: {att.clock_in ? new Date(att.clock_in).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : '-'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${att.clock_out ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                            {att.clock_out ? 'Selesai' : 'Aktif'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -4,39 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EquipmentLog extends Model
 {
     use HasFactory;
 
+    // [FIX] Sesuaikan dengan tabel database (lihat migrasi create_equipment_logs_table)
     protected $fillable = [
-        'technician_user_id',
         'equipment_id',
-        'borrowed_at',
-        'returned_at',
+        'user_id',
+        'task_id',  // Opsional, ada di database
+        'type',     // SEBELUMNYA SALAH: 'action' -> HARUS 'type'
+        'quantity',
         'notes',
     ];
 
-    protected $casts = [
-        'borrowed_at' => 'datetime',
-        'returned_at' => 'datetime',
-    ];
-
-    /**
-     * Relasi ke tabel Equipment (Alat)
-     * Wajib ada agar ->with('equipment') di controller berfungsi.
-     */
-    public function equipment(): BelongsTo
+    public function equipment()
     {
         return $this->belongsTo(Equipment::class);
     }
 
-    /**
-     * Relasi ke User (Teknisi)
-     */
-    public function technician(): BelongsTo
+    public function user()
     {
-        return $this->belongsTo(User::class, 'technician_user_id');
+        return $this->belongsTo(User::class);
     }
 }

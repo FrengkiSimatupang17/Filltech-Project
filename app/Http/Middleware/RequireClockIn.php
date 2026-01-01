@@ -7,30 +7,26 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
 use Symfony\Component\HttpFoundation\Response;
+use Carbon\Carbon;
 
 class RequireClockIn
 {
-    /**
-     * Handle an incoming request.
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
 
-        // Hanya cek jika user adalah Teknisi
         if ($user && $user->role === 'teknisi') {
             
-            // Cek apakah sudah ada record clock_in hari ini dan belum clock_out
-            $attendance = Attendance::where('technician_user_id', $user->id)
-                ->whereDate('clock_in', now()) // Cek tanggal hari ini
-                ->whereNull('clock_out') // Pastikan belum clock-out (masih kerja)
+            // [FIX] Gunakan 'user_id' dan 'date'
+            $attendance = Attendance::where('user_id', $user->id)
+                ->where('date', Carbon::today()->toDateString())
                 ->first();
 
-            if (!$attendance) {
-                // Jika belum absen, paksa redirect ke halaman absensi dengan pesan error
+            // Cek jika belum absen masuk (clock_in kosong)
+            if (!$attendance || !$attendance->clock_in) {
                 if (! $request->routeIs('teknisi.attendance.*')) {
-                    return redirect()->route('teknisi.attendance.index')
-                        ->with('error', 'Akses Ditolak: Anda wajib melakukan Clock-In di kantor sebelum melihat tugas.');
+                    return redirect()->route('dashboard')
+                        ->with('error', 'Anda harus Absen Masuk terlebih dahulu.');
                 }
             }
         }

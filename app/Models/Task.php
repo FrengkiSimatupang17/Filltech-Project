@@ -4,36 +4,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'client_user_id',
-        'technician_user_id',
-        'assigned_by_admin_id',
+        'client_user_id',       // ID User Client
+        'technician_user_id',   // ID User Teknisi (Nullable saat awal)
+        'assigned_by_admin_id', // ID User Admin (PENTING: Tambahkan ini)
         'title',
         'description',
-        'type',
-        'status',
-        // 'priority', <--- DIHAPUS
-        'completed_at'
+        'type',                 // PENTING: Tambahkan ini (installation/repair)
+        'status',               // assigned, in_progress, completed
+        'evidence_photo_path',
+        'address'               // Jika di database ada kolom address, masukkan. Jika tidak, hapus baris ini.
     ];
 
-    public function client(): BelongsTo
+    // Relasi ke Client
+    public function client()
     {
         return $this->belongsTo(User::class, 'client_user_id');
     }
 
-    public function technician(): BelongsTo
+    // Relasi ke Teknisi
+    public function technician()
     {
         return $this->belongsTo(User::class, 'technician_user_id');
-    }
-
-    public function assignor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_by_admin_id');
     }
 }

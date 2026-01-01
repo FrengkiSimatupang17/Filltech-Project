@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Subscription;
@@ -19,7 +20,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // --- DASHBOARD CLIENT ---
+        // --- 1. DASHBOARD CLIENT ---
         if ($user->role === 'client') {
             $subscription = Subscription::with('package')->where('user_id', $user->id)->latest()->first();
             $unpaidInvoice = Invoice::where('user_id', $user->id)->whereIn('status', ['pending', 'overdue'])->latest()->first();
@@ -30,72 +31,69 @@ class DashboardController extends Controller
             ]);
         }
 
-        // --- DASHBOARD TEKNISI ---
+        // --- 2. DASHBOARD TEKNISI ---
         if ($user->role === 'teknisi') {
             $teknisiId = $user->id;
+
+            // Note: Tabel tasks masih menggunakan 'technician_user_id' (sesuai migrasi tasks)
             $taskStats = [
                 'assigned' => Task::where('technician_user_id', $teknisiId)->where('status', 'assigned')->count(),
                 'in_progress' => Task::where('technician_user_id', $teknisiId)->where('status', 'in_progress')->count(),
-                'completed_today' => Task::where('technician_user_id', $teknisiId)->where('status', 'completed')->whereDate('updated_at', Carbon::today())->count(),
+                'completed_today' => Task::where('technician_user_id', $teknisiId)
+                    ->where('status', 'completed')
+                    ->whereDate('updated_at', Carbon::today())
+                    ->count(),
             ];
-            $todayAttendance = Attendance::where('technician_user_id', $teknisiId)->whereDate('clock_in', Carbon::today())->first();
+
+            // [FIX] Menggunakan 'user_id' dan 'date' sesuai migrasi attendances
+            $todayAttendanceRecord = Attendance::where('user_id', $teknisiId)
+                ->where('date', Carbon::today()->toDateString())
+                ->first();
+
+            $todayAttendance = null;
+            if ($todayAttendanceRecord) {
+                // Karena tipe kolom TIME, tidak perlu parsing timezone lagi (sudah string H:i:s)
+                $todayAttendance = [
+                    'id' => $todayAttendanceRecord->id,
+                    'clock_in' => $todayAttendanceRecord->clock_in, 
+                    'clock_out' => $todayAttendanceRecord->clock_out,
+                ];
+            }
 
             return Inertia::render('Dashboard/TeknisiDashboard', [
                 'taskStats' => $taskStats,
-                'todayAttendance' => $todayAttendance ? [
-                    'clock_in' => $todayAttendance->clock_in->timezone('Asia/Jakarta')->format('H:i'),
-                    'clock_out' => $todayAttendance->clock_out ? $todayAttendance->clock_out->timezone('Asia/Jakarta')->format('H:i') : null,
-                ] : null,
-                'isClockedIn' => $todayAttendance && !$todayAttendance->clock_out,
+                'todayAttendance' => $todayAttendance, 
+                'auth' => ['user' => $user]
             ]);
         }
 
-        // --- DASHBOARD ADMIN ---
-        
-        // 1. Statistik Kartu
-        $stats = [
-            'pending_payments' => Payment::where('status', 'pending')->count(),
-            'pending_tasks' => Task::where('status', 'pending')->count(),
-            'new_clients_monthly' => User::where('role', 'client')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->count(),
-            'monthly_revenue' => Invoice::where('status', 'paid')
-                ->whereMonth('paid_at', Carbon::now()->month)
-                ->whereYear('paid_at', Carbon::now()->year)
-                ->sum('amount'),
-        ];
-
-        // 2. Logika Grafik (PASTIKAN MENGGUNAKAN PAID_AT)
-        $monthlyRevenue = array_fill(1, 12, 0); // Array kosong Jan-Des
-
-        // Ambil data invoice LUNAS tahun ini yang punya tanggal bayar
-        $invoices = Invoice::where('status', 'paid')
-            ->whereYear('paid_at', Carbon::now()->year)
-            ->whereNotNull('paid_at')
-            ->get();
-
-        foreach ($invoices as $invoice) {
-            // Karena di Model sudah dicasting datetime, kita bisa akses ->month
-            $monthNumber = $invoice->paid_at->month; 
-            $monthlyRevenue[$monthNumber] += $invoice->amount;
-        }
-
-        // Format untuk Recharts / Frontend
-        $chart = [];
-        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-        foreach ($monthlyRevenue as $num => $total) {
-            $chart[] = [
-                'name' => $monthNames[$num - 1],
-                'total' => $total
+        // --- 3. DASHBOARD ADMIN ---
+        if ($user->role === 'administrator' || $user->role === 'admin') {
+            // ... (Logic Admin sama seperti sebelumnya) ...
+            $stats = [
+                'pending_payments' => Payment::where('status', 'pending')->count(),
+                'pending_tasks' => Task::where('status', 'pending')->count(),
+                'new_clients_monthly' => User::where('role', 'client')->whereMonth('created_at', Carbon::now()->month)->count(),
+                'monthly_revenue' => Invoice::where('status', 'paid')->whereMonth('paid_at', Carbon::now()->month)->sum('amount'),
             ];
-        }
+            
+            // Chart Logic Simplified
+            $monthlyRevenue = array_fill(1, 12, 0); 
+            $invoices = Invoice::where('status', 'paid')->whereYear('paid_at', Carbon::now()->year)->get();
+            foreach ($invoices as $invoice) {
+                $monthlyRevenue[$invoice->paid_at->month] += $invoice->amount;
+            }
+            $chart = [];
+            $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            foreach ($monthlyRevenue as $num => $total) {
+                $chart[] = ['name' => $monthNames[$num - 1], 'total' => $total];
+            }
 
-        // [FIX PATH] Pastikan ini mengarah ke file di resources/js/Pages/Dashboard/AdminDashboard.jsx
-        return Inertia::render('Dashboard/AdminDashboard', [
-            'stats' => $stats,
-            'chart' => $chart, 
-        ]);
+            return Inertia::render('Dashboard/AdminDashboard', [
+                'stats' => $stats, 'chart' => $chart
+            ]);
+        }
+        
+        return Inertia::render('Dashboard');
     }
 }

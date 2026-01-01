@@ -21,4 +21,10 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
+
+    'office' => [
+    'latitude' => env('OFFICE_LATITUDE', 1.0428872341176936),
+    'longitude' => env('OFFICE_LONGITUDE', 103.94553422842148),
+    'radius' => env('OFFICE_RADIUS', 100),
+    ],
 ];

@@ -5,115 +5,125 @@ namespace App\Http\Controllers\Teknisi;
 use App\Http\Controllers\Controller;
 use App\Models\Equipment;
 use App\Models\EquipmentLog;
+use App\Models\ActivityLog; // [WAJIB IMPORT] Agar tercatat di Audit Admin
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
 class EquipmentLogController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Menampilkan daftar alat & bahan beserta riwayat teknisi.
+     */
+    public function index()
     {
-        $teknisiId = Auth::id();
-        $search = $request->search;
+        // Ambil semua equipment, urutkan berdasarkan nama
+        $allEquipment = Equipment::orderBy('name', 'asc')->get();
 
-        $availableEquipmentQuery = Equipment::where('status', 'available');
+        // Hitung stok yang sedang dipegang user saat ini (Holding Qty)
+        // Ini PENTING agar tombol di frontend tahu harus menampilkan "Ambil" atau "Kembalikan"
+        $equipment = $allEquipment->map(function ($item) {
+            $userId = Auth::id();
 
-        if ($search) {
-            $availableEquipmentQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('serial_number', 'like', '%' . $search . '%');
-            });
-        }
+            // 1. Hitung total yang pernah diambil user ini
+            $taken = EquipmentLog::where('equipment_id', $item->id)
+                ->where('user_id', $userId)
+                ->where('type', 'take') 
+                ->sum('quantity');
+            
+            // 2. Hitung total yang sudah dikembalikan user ini
+            $returned = EquipmentLog::where('equipment_id', $item->id)
+                ->where('user_id', $userId)
+                ->where('type', 'return')
+                ->sum('quantity');
 
-        $availableEquipment = $availableEquipmentQuery->orderBy('name')->get();
+            // 3. Sisa di tangan = Total Ambil - Total Kembali
+            // max(0, ...) menjaga agar tidak ada nilai minus jika ada anomali data lama
+            $item->my_holding_qty = max(0, $taken - $returned);
+            
+            return $item;
+        });
         
-        $myBorrowedEquipment = EquipmentLog::with('equipment')
-            ->where('technician_user_id', $teknisiId)
-            ->whereNull('returned_at')
-            ->orderBy('borrowed_at', 'desc')
-            ->get()
-            ->map(fn ($log) => [
-                'id' => $log->id,
-                'equipment_name' => $log->equipment->name,
-                'serial_number' => $log->equipment->serial_number,
-                // PERBAIKAN: Konversi ke WIB
-                'borrowed_at' => $log->borrowed_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
-            ]);
-
-        $myHistory = EquipmentLog::with('equipment')
-            ->where('technician_user_id', $teknisiId)
-            ->whereNotNull('returned_at')
-            ->orderBy('borrowed_at', 'desc')
-            ->paginate(10)
-            ->withQueryString()
-            ->through(fn ($log) => [
-                'id' => $log->id,
-                'equipment_name' => $log->equipment->name,
-                'serial_number' => $log->equipment->serial_number,
-                // PERBAIKAN: Konversi ke WIB
-                'borrowed_at' => $log->borrowed_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
-                'returned_at' => $log->returned_at->timezone('Asia/Jakarta')->translatedFormat('d M Y, H:i'),
-            ]);
+        // Ambil riwayat log spesifik user ini untuk tab "Riwayat Saya"
+        $logs = EquipmentLog::with('equipment')
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->limit(50) // Batasi 50 agar query ringan
+            ->get();
 
         return Inertia::render('Teknisi/Equipment/Index', [
-            'availableEquipment' => $availableEquipment,
-            'myBorrowedEquipment' => $myBorrowedEquipment,
-            'myHistory' => $myHistory,
-            'filters' => $request->only('search'),
+            'equipment' => $equipment,
+            'logs' => $logs
         ]);
     }
 
+    /**
+     * Memproses pengambilan atau pengembalian barang.
+     */
     public function store(Request $request)
     {
         $request->validate([
             'equipment_id' => 'required|exists:equipment,id',
+            'quantity' => 'required|integer|min:1',
+            'type' => 'required|in:take,return',
+            'notes' => 'nullable|string|max:255',
         ]);
 
-        $teknisiId = Auth::id();
-        $equipmentId = $request->equipment_id;
+        // Gunakan Transaksi Database untuk menjamin keamanan data (All or Nothing)
+        DB::beginTransaction();
 
-        $response = DB::transaction(function () use ($teknisiId, $equipmentId) {
-            $equipment = Equipment::where('id', $equipmentId)->where('status', 'available')->lockForUpdate()->first();
+        try {
+            // lockForUpdate() mencegah race condition (dua orang mengambil barang terakhir bersamaan)
+            $equipment = Equipment::where('id', $request->equipment_id)->lockForUpdate()->firstOrFail();
+            $qty = (int) $request->quantity;
 
-            if (!$equipment) {
-                return ['error' => 'Alat tidak tersedia atau sudah dipinjam.'];
+            // --- Logic Perubahan Stok Barang ---
+            if ($request->type === 'take') { 
+                // Cek Stok Gudang
+                if ($equipment->available_quantity < $qty) {
+                    DB::rollback(); // Batalkan transaksi
+                    return redirect()->back()->withErrors(['quantity' => "Stok gudang tidak cukup! Sisa: {$equipment->available_quantity}"]);
+                }
+                // Kurangi Stok
+                $equipment->decrement('available_quantity', $qty);
+            } 
+            elseif ($request->type === 'return') {
+                // Tambah Stok Kembali
+                $equipment->increment('available_quantity', $qty);
             }
 
+            // --- 1. Simpan Log Transaksi Barang (Untuk Tampilan Teknisi) ---
             EquipmentLog::create([
-                'technician_user_id' => $teknisiId,
-                'equipment_id' => $equipmentId,
-                'borrowed_at' => now(),
+                'equipment_id' => $request->equipment_id,
+                'user_id' => Auth::id(),
+                'type' => $request->type,
+                'quantity' => $qty,
+                'notes' => $request->notes,
             ]);
 
-            $equipment->update(['status' => 'in_use']);
-            return ['success' => 'Peminjaman alat berhasil dicatat.'];
-        });
+            // --- 2. Simpan Activity Log (Untuk Audit Admin) ---
+            // Mencatat aktivitas ini agar Admin bisa memantau siapa yang mengambil/mengembalikan barang
+            $actionText = $request->type === 'take' ? 'mengambil' : 'mengembalikan';
+            $categoryText = $equipment->category === 'tool' ? 'Alat' : 'Bahan';
 
-        if (isset($response['error'])) {
-            return Redirect::back()->with('error', $response['error']);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'technician_equipment_' . $request->type, 
+                'event' => 'create',
+                'description' => "Teknisi " . Auth::user()->name . " {$actionText} {$categoryText}: {$equipment->name} (Qty: {$qty})",
+                'ip_address' => $request->ip(),
+            ]);
+
+            // Simpan perubahan permanen ke database
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Transaksi berhasil disimpan.');
+
+        } catch (\Exception $e) {
+            // Jika ada error apapun, batalkan semua perubahan data
+            DB::rollback();
+            return redirect()->back()->withErrors(['error' => 'Gagal memproses transaksi: ' . $e->getMessage()]);
         }
-
-        return Redirect::route('teknisi.equipment.index')->with('success', $response['success']);
-    }
-
-    public function update(Request $request, EquipmentLog $equipmentLog)
-    {
-        if ($equipmentLog->technician_user_id !== Auth::id() || $equipmentLog->returned_at) {
-            abort(403);
-        }
-
-        $response = DB::transaction(function () use ($equipmentLog) {
-            $equipmentLog->update(['returned_at' => now()]);
-
-            $equipment = $equipmentLog->equipment;
-            if ($equipment->status === 'in_use') {
-                $equipment->update(['status' => 'available']);
-            }
-            return ['success' => 'Pengembalian alat berhasil dicatat.'];
-        });
-
-        return Redirect::route('teknisi.equipment.index')->with('success', $response['success']);
     }
 }

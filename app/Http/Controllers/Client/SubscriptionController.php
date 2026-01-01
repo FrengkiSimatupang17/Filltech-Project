@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Notifications\SystemAlert;
+use App\Models\ActivityLog; // [WAJIB IMPORT] Agar tercatat di Audit
+use App\Notifications\SystemAlert; // Pastikan file notifikasi ini ada
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -47,18 +48,35 @@ class SubscriptionController extends Controller
                 ->with('error', 'Anda sudah memiliki langganan aktif atau sedang diproses.');
         }
 
-        Subscription::create([
+        $package = Package::find($request->package_id);
+
+        // 1. Simpan Subscription (Status Pending)
+        $subscription = Subscription::create([
             'user_id' => $user->id,
             'package_id' => $request->package_id,
             'status' => 'pending',
         ]);
 
+        // 2. [FIX] Catat Log Aktivitas Client (Audit Trail)
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'action' => 'client_subscribe',
+            'event' => 'create',
+            'description' => "Mengajukan permintaan langganan paket: {$package->name}",
+            'ip_address' => $request->ip(),
+        ]);
+
+        // 3. Kirim Notifikasi ke Admin
         $admins = User::where('role', 'administrator')->get();
-        Notification::send($admins, new SystemAlert(
-            'Permintaan Langganan Baru dari ' . $user->name,
-            route('admin.subscriptions.index'),
-            'subscription'
-        ));
+        
+        // Pastikan class SystemAlert sudah dibuat di App\Notifications
+        if (class_exists(SystemAlert::class)) {
+            Notification::send($admins, new SystemAlert(
+                'Permintaan Langganan Baru dari ' . $user->name,
+                route('admin.subscriptions.index'), // Pastikan route ini ada
+                'subscription'
+            ));
+        }
 
         return Redirect::route('client.subscribe.index')->with('success', 'Permintaan berlangganan berhasil dikirim. Mohon tunggu verifikasi admin.');
     }

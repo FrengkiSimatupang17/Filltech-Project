@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\ActivityLog; // [WAJIB IMPORT]
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Auth; // [WAJIB IMPORT]
 use Inertia\Inertia;
+// [TAMBAHAN] Import untuk Notifikasi
+use App\Notifications\SystemAlert;
+use Illuminate\Support\Facades\Notification;
 
 class TaskManagementController extends Controller
 {
@@ -15,58 +19,91 @@ class TaskManagementController extends Controller
     {
         $query = Task::with(['client', 'technician']);
 
-        if ($request->has('status') && $request->status !== 'all') {
+        // 1. Filter Search
+        if ($request->filled('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('client', function($q) use ($request) {
+                      $q->where('name', 'like', '%' . $request->search . '%');
+                  });
+        }
+
+        // 2. Filter Status
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('client', function($sq) use ($request) {
-                      $sq->where('name', 'like', '%' . $request->search . '%');
-                  });
-            });
-        }
-
-        $tasks = $query->latest()
+        // 3. Sorting: Pending -> Assigned -> In Progress -> Completed
+        $tasks = $query->orderByRaw("CASE 
+                WHEN status = 'pending' THEN 1 
+                WHEN status = 'assigned' THEN 2 
+                WHEN status = 'in_progress' THEN 3 
+                ELSE 4 END")
+            ->latest()
             ->paginate(10)
-            ->withQueryString()
-            ->through(fn ($task) => [
-                'id' => $task->id,
-                'title' => $task->title,
-                'type' => $task->type,
-                'status' => $task->status,
-                'client_name' => $task->client ? $task->client->name : 'Unknown Client',
-                'technician_name' => $task->technician ? $task->technician->name : null,
-                'created_at' => $task->created_at->translatedFormat('d M Y'),
-            ]);
+            ->withQueryString();
 
-        $technicians = User::where('role', 'teknisi')
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $technicians = User::where('role', 'teknisi')->get(['id', 'name']);
 
         return Inertia::render('Admin/Tasks/Index', [
             'tasks' => $tasks,
-            'teknisi' => $technicians,
+            'technicians' => $technicians,
+            // [CRITICAL FIX] Mengirim filters ke props agar frontend tidak error
             'filters' => $request->only(['search', 'status']),
         ]);
     }
 
     public function update(Request $request, Task $task)
     {
-        if ($request->has('technician_user_id')) {
-            $request->validate([
-                'technician_user_id' => 'required|exists:users,id',
-            ]);
+        $validated = $request->validate([
+            'technician_user_id' => 'nullable|exists:users,id',
+            'status' => 'required|string',
+        ]);
 
-            $task->update([
-                'technician_user_id' => $request->technician_user_id,
-                'status' => 'assigned',
-            ]);
+        // Cek apakah ini penugasan baru (untuk keperluan log)
+        $oldTechnicianId = $task->technician_user_id;
 
-            return Redirect::back()->with('success', 'Tugas berhasil ditugaskan ke teknisi.');
+        // Update Data
+        $task->update($validated);
+
+        // --- [FIX] CATAT ACTIVITY LOG ADMIN ---
+        $description = "Memperbarui tugas: " . $task->title;
+        $action = 'update_task';
+
+        // Deteksi jika ini adalah penugasan teknisi
+        if ($request->filled('technician_user_id') && $request->technician_user_id != $oldTechnicianId) {
+            $techName = $task->technician->name ?? 'Unknown';
+            $description = "Menugaskan Teknisi {$techName} untuk tugas: {$task->title}";
+            $action = 'assign_task';
+
+            // [TAMBAHAN WAJIB] KIRIM NOTIFIKASI KE TEKNISI
+            // Ini yang membuat notifikasi muncul di dashboard teknisi
+            $newTechnician = User::find($request->technician_user_id);
+            if ($newTechnician) {
+                try {
+                    Notification::send($newTechnician, new SystemAlert(
+                        'Tugas Baru: ' . $task->title,
+                        route('teknisi.tasks.index'), // Link ke halaman teknisi
+                        'task'
+                    ));
+                } catch (\Exception $e) {
+                    // Silent fail jika email error
+                }
+            }
+        }
+        // Deteksi jika hanya ganti status
+        elseif ($request->filled('status')) {
+            $description = "Mengubah status tugas '{$task->title}' menjadi " . strtoupper($request->status);
         }
 
-        return Redirect::back();
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => $action,
+            'event' => 'update',
+            'description' => $description,
+            'ip_address' => $request->ip(),
+        ]);
+        // ---------------------------------------
+
+        return redirect()->back()->with('success', 'Status tugas berhasil diperbarui.');
     }
 }

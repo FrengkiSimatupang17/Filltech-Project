@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\ActivityLog; 
 use App\Notifications\SystemAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -20,57 +23,78 @@ class PaymentController extends Controller
         $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
             'payment_proof' => 'required|file|image|max:2048|mimes:jpg,jpeg,png',
-            'payment_date' => 'required|date',      // Wajib ada di form frontend
-            'payment_method' => 'required|string',  // Wajib ada di form frontend (Transfer/Cash)
+            'payment_date' => 'required|date',
+            'payment_method' => 'required|string',
             'amount' => 'required|numeric|min:1000',
         ]);
 
-        // 2. KEAMANAN (Anti-IDOR): Pastikan Invoice milik User yang login
-        // Menggunakan where() berantai lebih aman daripada find() lalu cek if()
+        // 2. Keamanan: Cari Invoice milik user login
         $invoice = Invoice::where('id', $request->invoice_id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // 3. Cek Status Invoice (Hanya boleh bayar jika pending atau overdue)
-        // Kita izinkan 'overdue' agar user yang telat tetap bisa bayar.
-        if (!in_array($invoice->status, ['pending', 'overdue'])) {
-             return Redirect::back()->with('error', 'Tagihan ini tidak memerlukan pembayaran.');
+        // 3. Cek Duplikasi
+        if ($invoice->payment()->where('status', 'pending')->exists()) {
+            return Redirect::back()->with('error', 'Pembayaran sedang dalam verifikasi.');
         }
 
-        // 4. Cek Duplikasi: Jangan izinkan upload jika sedang diverifikasi
-        if ($invoice->payment()->whereIn('status', ['pending', 'verified'])->exists()) {
-            return Redirect::route('client.invoices.index')
-                ->with('error', 'Pembayaran untuk tagihan ini sudah dikirim dan sedang diproses.');
-        }
+        // --- MULAI TRANSAKSI ---
+        DB::beginTransaction();
 
-        // 5. Upload File
-        $path = $request->file('payment_proof')->store('payment-proofs', 'public');
-
-        // 6. Simpan ke Database
-        Payment::create([
-            'invoice_id' => $invoice->id,
-            'user_id' => Auth::id(),
-            'amount' => $request->amount, // Gunakan input user (bisa jadi bayar parsial)
-            'payment_proof_path' => $path, // Sesuaikan dengan nama kolom di DB Anda
-            'payment_date' => $request->payment_date,
-            'payment_method' => $request->payment_method,
-            'status' => 'pending',
-        ]);
-
-        // 7. Kirim Notifikasi ke Admin (Kode Asli Anda)
-        $admins = User::where('role', 'administrator')->get();
-        
         try {
-            Notification::send($admins, new SystemAlert(
-                'Verifikasi Pembayaran Baru: Rp ' . number_format($request->amount, 0, ',', '.'),
-                route('admin.payments.index'),
-                'payment'
-            ));
-        } catch (\Exception $e) {
-            // Abaikan error notifikasi agar user tetap sukses bayar meski email gagal kirim
-            // Log::error('Gagal kirim notifikasi: ' . $e->getMessage());
-        }
+            // 4. Upload File
+            $path = $request->file('payment_proof')->store('payment-proofs', 'public');
 
-        return Redirect::route('client.invoices.index')->with('success', 'Bukti pembayaran berhasil diunggah & menunggu verifikasi.');
+            // 5. Simpan Payment
+            Payment::create([
+                'invoice_id' => $invoice->id,
+                'user_id' => Auth::id(),
+                'amount' => $request->amount,
+                'payment_proof_path' => $path, 
+                'payment_date' => $request->payment_date,
+                'payment_method' => $request->payment_method,
+                'status' => 'pending',
+            ]);
+
+            // 6. Update Status Invoice 
+            // PENTING: Jika langkah ini gagal (Check Constraint PGSQL), catch block akan menangkapnya.
+            $invoice->update(['status' => 'waiting_verification']);
+
+            // 7. Catat Log Activity
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'client_payment',
+                'event' => 'create',
+                'description' => "Upload bukti bayar Rp " . number_format($request->amount, 0, ',', '.') . " untuk Invoice #{$invoice->invoice_number}",
+                'ip_address' => $request->ip(),
+            ]);
+
+            // Jika semua langkah di atas sukses, simpan permanen ke DB
+            DB::commit();
+
+            // 8. Kirim Notifikasi Dashboard (Tanpa Email)
+            try {
+                $admins = User::where('role', 'administrator')->get();
+                if (class_exists(SystemAlert::class)) {
+                    Notification::send($admins, new SystemAlert(
+                        'Pembayaran Baru: Rp ' . number_format($request->amount, 0, ',', '.'),
+                        route('admin.payments.index'),
+                        'payment'
+                    ));
+                }
+            } catch (\Exception $e) {
+                Log::warning('Notifikasi gagal: ' . $e->getMessage());
+            }
+
+            return Redirect::route('client.invoices.index')->with('success', 'Bukti pembayaran berhasil diunggah.');
+
+        } catch (\Exception $e) {
+            DB::rollback(); // BATALKAN SEMUA
+            
+            Log::error('Gagal Simpan Pembayaran: ' . $e->getMessage());
+            
+            // Mengirim pesan error asli agar Anda tahu masalah DB-nya
+            return Redirect::back()->with('error', 'Gagal: ' . $e->getMessage());
+        }
     }
 }

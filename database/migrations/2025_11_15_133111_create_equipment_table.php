@@ -11,8 +11,15 @@ return new class extends Migration
         Schema::create('equipment', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('serial_number', 100)->unique()->nullable();
-            $table->enum('status', ['available', 'in_use', 'maintenance'])->default('available');
+            
+            $table->string('category')->default('tool'); // tool (Alat) / material (Bahan)
+            $table->string('unit')->default('pcs');      // pcs, roll, box
+            
+            $table->integer('total_quantity');
+            $table->integer('available_quantity');
+            
+            $table->string('status')->default('available'); // available, maintenance, out_of_stock
+            
             $table->timestamps();
         });
     }

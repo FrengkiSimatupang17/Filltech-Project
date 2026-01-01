@@ -6,23 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('technician_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('assigned_by_admin_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('client_user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('technician_user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('assigned_by_admin_id')->nullable()->constrained('users')->onDelete('set null');
+            
             $table->string('title');
             $table->text('description')->nullable();
-            $table->enum('type', ['installation', 'repair']);
+            $table->enum('type', ['installation', 'repair', 'maintenance']);
             $table->enum('status', ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'])->default('pending');
-            $table->timestamp('completed_at')->nullable();
+            
+            // [BARU] Kolom Bukti Foto
+            $table->string('evidence_photo_path')->nullable();
+            
             $table->timestamps();
         });
     }
 
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('tasks');
     }

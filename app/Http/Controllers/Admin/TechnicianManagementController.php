@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\ActivityLog; // [WAJIB IMPORT] Agar tercatat di Log Admin
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Auth; // [WAJIB IMPORT] Untuk ID Admin
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -54,13 +56,22 @@ class TechnicianManagementController extends Controller
             'phone_number' => 'nullable|string|max:20',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'teknisi',
             'id_unik' => $request->id_unik,
             'phone_number' => $request->phone_number,
+        ]);
+
+        // [FIX] Catat Log Aktivitas Admin
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'create_technician',
+            'event' => 'create',
+            'description' => 'Mendaftarkan teknisi baru: ' . $user->name,
+            'ip_address' => $request->ip(),
         ]);
 
         return Redirect::route('admin.technicians.index')->with('success', 'Teknisi baru berhasil ditambahkan!');
@@ -84,12 +95,32 @@ class TechnicianManagementController extends Controller
 
         $technician->save();
 
+        // [FIX] Catat Log Aktivitas Admin
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'update_technician',
+            'event' => 'update',
+            'description' => 'Memperbarui data teknisi: ' . $technician->name,
+            'ip_address' => $request->ip(),
+        ]);
+
         return Redirect::route('admin.technicians.index')->with('success', 'Data teknisi berhasil diperbarui.');
     }
 
     public function destroy(User $technician)
     {
+        $name = $technician->name; // Simpan nama sebelum dihapus
+        
         $technician->delete();
+
+        // [FIX] Catat Log Aktivitas Admin
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'delete_technician',
+            'event' => 'delete',
+            'description' => 'Menghapus akun teknisi: ' . $name,
+            'ip_address' => request()->ip(),
+        ]);
 
         return Redirect::route('admin.technicians.index')->with('success', 'Akun teknisi berhasil dihapus.');
     }

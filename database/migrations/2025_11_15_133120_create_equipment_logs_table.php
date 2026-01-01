@@ -6,20 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
         Schema::create('equipment_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('technician_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('equipment_id')->constrained()->restrictOnDelete();
-            $table->timestamp('borrowed_at')->useCurrent();
-            $table->timestamp('returned_at')->nullable();
+            $table->foreignId('equipment_id')->constrained('equipment')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Teknisi
+            $table->foreignId('task_id')->nullable()->constrained('tasks')->onDelete('set null');
+            
+            $table->integer('quantity');
+            $table->enum('type', ['take', 'return', 'restock'])->default('take');
             $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
 
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('equipment_logs');
     }

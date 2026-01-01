@@ -9,11 +9,17 @@ class Equipment extends Model
 {
     use HasFactory;
 
-    protected $table = 'equipment';
-
     protected $fillable = [
         'name',
-        'serial_number',
+        'category',
+        'total_quantity',
+        'available_quantity',
+        'unit',
         'status',
     ];
+
+    public function logs()
+    {
+        return $this->hasMany(EquipmentLog::class);
+    }
 }

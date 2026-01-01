@@ -14,12 +14,26 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'id_unik', 
-        'phone_number', 'status', 'google_id', 'avatar',
-        'alamat', 'rt', 'rw', 'blok', 'nomor_rumah'
+        'name', 
+        'email', 
+        'password', 
+        'role', 
+        'id_unik', 
+        'phone_number', 
+        'status', 
+        'google_id', 
+        'avatar', // Pastikan kolom ini ada di DB atau gunakan google_avatar
+        'alamat', 
+        'rt', 
+        'rw', 
+        'blok', 
+        'nomor_rumah'
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -40,6 +54,7 @@ class User extends Authenticatable
                 $no   = $user->nomor_rumah ?: '-';
 
                 // 1. Buat Format Dasar: Tanggal_RW_RT.NoRumah
+                // Contoh: 25122025_05_02.12A
                 $baseId = "{$date}_{$rw}_{$rt}.{$no}";
                 
                 // 2. Cek Duplikat di Database
@@ -47,7 +62,6 @@ class User extends Authenticatable
                 $counter = 1;
 
                 // Selama ID ini sudah ada di database, tambahkan suffix angka (_1, _2, dst)
-                // Contoh collision: 25122025_-_-.- menjadi 25122025_-_-.-_1
                 while (static::where('id_unik', $finalId)->exists()) {
                     $finalId = "{$baseId}_{$counter}";
                     $counter++;
@@ -60,20 +74,28 @@ class User extends Authenticatable
     }
 
     // --- RELASI ---
-    public function invoices(): HasMany {
+
+    public function invoices(): HasMany 
+    {
         return $this->hasMany(Invoice::class);
     }
 
-    public function subscription(): HasOne {
+    public function subscription(): HasOne 
+    {
+        // Mengambil subscription terbaru
         return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
-    public function clientTasks(): HasMany {
-        return $this->hasMany(Task::class, 'user_id');
+    // Tugas sebagai Client (Yang order pasang)
+    public function clientTasks(): HasMany 
+    {
+        return $this->hasMany(Task::class, 'client_user_id');
     }
 
-    public function technicianTasks(): HasMany {
-        return $this->hasMany(Task::class, 'technician_id');
+    // Tugas sebagai Teknisi (Yang mengerjakan)
+    public function technicianTasks(): HasMany 
+    {
+        return $this->hasMany(Task::class, 'technician_user_id');
     }
 
     // --- HELPER ROLE ---
@@ -81,17 +103,27 @@ class User extends Authenticatable
     public function isTeknisi(): bool { return $this->role === 'teknisi'; }
     public function isClient(): bool { return $this->role === 'client'; }
 
+    // --- ACCESSOR (FORMAT ALAMAT) ---
+    // Cara panggil di controller/view: $user->address_detail
     public function getAddressDetailAttribute(): string
     {
         $parts = [];
+        
+        // Cek Alamat Jalan
         if ($this->alamat && $this->alamat !== '-') $parts[] = $this->alamat;
+        
+        // Cek Blok & Nomor
         if ($this->blok && $this->blok !== '-') $parts[] = "Blok {$this->blok}";
         if ($this->nomor_rumah && $this->nomor_rumah !== '-') $parts[] = "No. {$this->nomor_rumah}";
         
+        // Cek RT/RW
         $rtRw = [];
         if ($this->rt && $this->rt !== '-') $rtRw[] = "RT.{$this->rt}";
         if ($this->rw && $this->rw !== '-') $rtRw[] = "RW.{$this->rw}";
-        if (!empty($rtRw)) $parts[] = implode('/', $rtRw);
+        
+        if (!empty($rtRw)) {
+            $parts[] = implode('/', $rtRw);
+        }
 
         return empty($parts) ? '-' : implode(', ', $parts);
     }

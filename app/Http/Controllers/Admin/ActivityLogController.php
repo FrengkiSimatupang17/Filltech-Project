@@ -3,25 +3,47 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Spatie\Activitylog\Models\Activity;
 
 class ActivityLogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $logs = Activity::with('causer')
-            ->latest()
-            ->paginate(15)
-            ->through(fn ($activity) => [
-                'id' => $activity->id,
-                'description' => $activity->description,
-                'causer_name' => $activity->causer ? $activity->causer->name : 'System',
-                'created_at' => $activity->created_at->translatedFormat('d M Y, H:i:s'),
-            ]);
+        $query = ActivityLog::with('user');
 
-        return Inertia::render('Admin/ActivityLog/Index', [
+        // 1. Filter Tanggal
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('created_at', [
+                $request->start_date . ' 00:00:00', 
+                $request->end_date . ' 23:59:59'
+            ]);
+        }
+
+        // 2. Filter Role User
+        if ($request->filled('role')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('role', $request->role);
+            });
+        }
+
+        // 3. Filter Search (Nama/Deskripsi)
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->whereHas('user', function($subQ) use ($request) {
+                    $subQ->where('name', 'like', "%{$request->search}%");
+                })
+                ->orWhere('description', 'like', "%{$request->search}%")
+                ->orWhere('action', 'like', "%{$request->search}%");
+            });
+        }
+
+        $logs = $query->latest()->paginate(20)->withQueryString();
+
+        return Inertia::render('Admin/ActivityLogs/Index', [
             'logs' => $logs,
+            'filters' => $request->only(['search', 'start_date', 'end_date', 'role'])
         ]);
     }
 }
