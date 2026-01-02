@@ -24,7 +24,7 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
         patch(route('profile.update'));
     };
 
-    // [UPGRADE] Auto-format RT menjadi 3 digit (contoh: 1 -> 001) saat kursor lepas
+    // Auto-format RT menjadi 3 digit (contoh: 1 -> 001) saat kursor lepas
     const handleRtBlur = (e) => {
         let val = e.target.value;
         // Jika ada isi tapi kurang dari 3 digit, tambahkan 0 di depan
@@ -123,7 +123,6 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                                 className="mt-1 block w-full"
                                 value={data.alamat}
                                 onChange={(e) => setData('alamat', e.target.value)}
-                                required
                                 placeholder="Contoh: Jl. Merpati Indah"
                             />
                             <InputError className="mt-2" message={errors.alamat} />
@@ -131,33 +130,33 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
 
                         {/* RT & RW */}
                         <div className="grid grid-cols-2 gap-4">
+                            {/* INPUT RT (TETAP ANGKA 3 DIGIT) */}
                             <div>
-                                <InputLabel htmlFor="rt" value="RT (Wajib 3 Digit)" />
+                                <InputLabel htmlFor="rt" value="RT (Angka)" />
                                 <TextInput
                                     id="rt"
                                     className="mt-1 block w-full text-center font-mono font-bold"
                                     value={data.rt}
                                     onChange={(e) => {
-                                        // Hanya terima angka
                                         const val = e.target.value.replace(/\D/g, '');
                                         setData('rt', val);
                                     }}
-                                    onBlur={handleRtBlur} // Format otomatis saat keluar
+                                    onBlur={handleRtBlur}
                                     maxLength={3}
-                                    required
                                     placeholder="001"
                                 />
                                 <InputError className="mt-2" message={errors.rt} />
                             </div>
+                            
+                            {/* INPUT RW (BEBAS TEXT - SESUAI REQUEST ANDA) */}
                             <div>
-                                <InputLabel htmlFor="rw" value="RW" />
+                                <InputLabel htmlFor="rw" value="RW / Dusun" />
                                 <TextInput
                                     id="rw"
-                                    className="mt-1 block w-full text-center font-mono font-bold uppercase"
+                                    className="mt-1 block w-full text-center font-bold uppercase"
                                     value={data.rw}
-                                    onChange={(e) => setData('rw', e.target.value)}
-                                    required
-                                    placeholder="05A"
+                                    onChange={(e) => setData('rw', e.target.value.toUpperCase())}
+                                    placeholder="MANTANG / 05A"
                                 />
                                 <InputError className="mt-2" message={errors.rw} />
                             </div>
@@ -172,7 +171,6 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                                     className="mt-1 block w-full uppercase"
                                     value={data.blok}
                                     onChange={(e) => setData('blok', e.target.value.toUpperCase())}
-                                    required
                                     placeholder="A5"
                                 />
                                 <InputError className="mt-2" message={errors.blok} />
@@ -184,7 +182,6 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                                     className="mt-1 block w-full"
                                     value={data.nomor_rumah}
                                     onChange={(e) => setData('nomor_rumah', e.target.value)}
-                                    required
                                     placeholder="10"
                                 />
                                 <InputError className="mt-2" message={errors.nomor_rumah} />

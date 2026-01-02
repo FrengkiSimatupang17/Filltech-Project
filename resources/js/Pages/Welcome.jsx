@@ -13,7 +13,8 @@ import {
     ArrowRightIcon,
     ServerIcon,
     UserGroupIcon,
-    GlobeAsiaAustraliaIcon
+    GlobeAsiaAustraliaIcon,
+    InformationCircleIcon // Icon baru untuk detail
 } from '@heroicons/react/24/outline';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -53,11 +54,54 @@ export default function Welcome({ auth, packages }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Data Paket Default (Jaga-jaga jika props packages kosong/undefined dari controller)
+    // --- STATE UNTUK MODAL ---
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedPackage, setSelectedPackage] = useState(null);
+
+    // Data Paket Default dengan Deskripsi & Detail Unik
     const defaultPackages = [
-        { id: 1, name: 'Basic', price: 150000, speed: '10 Mbps', description: 'Cocok untuk 1-3 perangkat' },
-        { id: 2, name: 'Family', price: 250000, speed: '20 Mbps', description: 'Best Seller untuk keluarga' },
-        { id: 3, name: 'Gamer', price: 350000, speed: '50 Mbps', description: 'Kecepatan maksimal tanpa lag' },
+        { 
+            id: 1, 
+            name: 'Basic Home', 
+            price: 150000, 
+            speed: '10 Mbps', 
+            description: 'Pilihan hemat untuk kebutuhan harian ringan.',
+            details: [
+                'Cocok untuk 1-3 Perangkat',
+                'Browsing & Chatting Lancar',
+                'Streaming Video HD (720p)',
+                'Akses Media Sosial Stabil',
+                'Ideal untuk Kos / Pengguna Tunggal'
+            ]
+        },
+        { 
+            id: 2, 
+            name: 'Family Super', 
+            price: 250000, 
+            speed: '30 Mbps', 
+            description: 'Best Seller! Solusi hiburan lengkap untuk keluarga.',
+            details: [
+                'Cocok untuk 4-7 Perangkat',
+                'Streaming Film 4K Tanpa Buffering',
+                'Zoom Meeting & WFH Lancar',
+                'Gaming Ringan Stabil',
+                'Prioritas Support Kendala'
+            ]
+        },
+        { 
+            id: 3, 
+            name: 'Gamer Pro', 
+            price: 450000, 
+            speed: '100 Mbps', 
+            description: 'Performa maksimal tanpa kompromi. Anti Lag.',
+            details: [
+                'Perangkat Tidak Terbatas',
+                'Koneksi Low Latency (Ping Kecil)',
+                'Upload File Besar Cepat',
+                'Live Streaming Lancar',
+                'Mendapatkan IP Public (Opsional)'
+            ]
+        },
     ];
 
     const displayPackages = (packages && packages.length > 0) ? packages : defaultPackages;
@@ -76,18 +120,28 @@ export default function Welcome({ auth, packages }) {
 
     const formatRupiah = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
+    // --- HANDLER MODAL ---
+    const openModal = (pkg) => {
+        setSelectedPackage(pkg);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setTimeout(() => setSelectedPackage(null), 300); // Delay clear data agar animasi smooth
+    };
+
     return (
         <>
             <Head title="Internet Cepat & Berkah" />
             
-            <div className="min-h-screen bg-white font-sans text-slate-800 overflow-x-hidden selection:bg-blue-600 selection:text-white">
+            <div className={`min-h-screen bg-white font-sans text-slate-800 overflow-x-hidden selection:bg-blue-600 selection:text-white ${isModalOpen ? 'overflow-hidden' : ''}`}>
                 
                 {/* --- NAVBAR --- */}
-                <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-3' : 'bg-transparent py-6'}`}>
+                <nav className={`fixed top-0 w-full z-40 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-3' : 'bg-transparent py-6'}`}>
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <ApplicationLogo className={`h-9 w-auto transition-colors ${isScrolled ? 'text-blue-700' : 'text-white'}`} />
-                            {/* PERUBAHAN NAMA BRAND DISINI */}
                             <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
                                 Filltech Berkah Bersama
                             </span>
@@ -154,14 +208,12 @@ export default function Welcome({ auth, packages }) {
 
                 {/* --- HERO SECTION --- */}
                 <section className="relative h-[110vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-                    {/* Background Image (Abstract Network) */}
                     <div className="absolute inset-0 z-0">
                         <img 
                             src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop" 
                             alt="Background Network" 
                             className="w-full h-full object-cover"
                         />
-                        {/* Overlay Gradient */}
                         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-slate-900 z-10"></div>
                     </div>
 
@@ -230,12 +282,10 @@ export default function Welcome({ auth, packages }) {
                     </div>
                 </section>
 
-                {/* --- ABOUT SECTION (IMAGE + TEXT) --- */}
+                {/* --- ABOUT SECTION --- */}
                 <section id="tentang" className="py-24 bg-white overflow-hidden">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex flex-col lg:flex-row items-center gap-16">
-                            
-                            {/* Image Side */}
                             <div className="w-full lg:w-1/2 relative">
                                 <Reveal>
                                     <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-100">
@@ -249,12 +299,10 @@ export default function Welcome({ auth, packages }) {
                                             <p className="text-slate-300 text-sm">Menghubungkan kebahagiaan di rumah.</p>
                                         </div>
                                     </div>
-                                    {/* Decorative Dot Grid */}
                                     <div className="absolute -z-10 -bottom-10 -right-10 w-40 h-40 bg-[url('/grid-pattern.svg')] opacity-20"></div>
                                 </Reveal>
                             </div>
 
-                            {/* Text Side */}
                             <div className="w-full lg:w-1/2">
                                 <Reveal delay={200}>
                                     <span className="text-blue-600 font-bold tracking-wider uppercase text-sm mb-2 block">Tentang Filltech</span>
@@ -280,12 +328,11 @@ export default function Welcome({ auth, packages }) {
                                     </div>
                                 </Reveal>
                             </div>
-
                         </div>
                     </div>
                 </section>
 
-                {/* --- FEATURES SECTION (CARDS) --- */}
+                {/* --- FEATURES SECTION --- */}
                 <section id="keunggulan" className="py-24 bg-slate-50 relative">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -331,7 +378,6 @@ export default function Welcome({ auth, packages }) {
 
                 {/* --- PRICING SECTION --- */}
                 <section id="paket" className="py-24 bg-slate-900 relative overflow-hidden">
-                    {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4b5563_1px,transparent_1px)] [background-size:16px_16px]"></div>
                     
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -377,7 +423,8 @@ export default function Welcome({ auth, packages }) {
                                                     </div>
                                                     <span className="font-bold text-white">Speed {pkg.speed}</span>
                                                 </li>
-                                                {['Unlimited Quota (No FUP)', 'Gratis Modem WiFi', 'Support Prioritas'].map((feat, i) => (
+                                                {/* Tampilkan fitur utama saja di kartu */}
+                                                {(pkg.details ? pkg.details.slice(0, 3) : ['Unlimited Quota', 'Gratis Modem', 'Support 24/7']).map((feat, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
                                                         <CheckCircleIcon className={`w-5 h-5 ${index === 1 ? 'text-blue-300' : 'text-slate-600'}`} />
                                                         <span>{feat}</span>
@@ -385,16 +432,18 @@ export default function Welcome({ auth, packages }) {
                                                 ))}
                                             </ul>
 
-                                            <Link 
-                                                href={auth.user ? route('client.subscribe.index') : route('register')} 
-                                                className={`w-full py-4 rounded-xl font-bold text-center transition-all shadow-lg ${
+                                            {/* TOMBOL MODIFIKASI: BUKA MODAL */}
+                                            <button 
+                                                onClick={() => openModal(pkg)}
+                                                className={`w-full py-4 rounded-xl font-bold text-center transition-all shadow-lg flex items-center justify-center gap-2 ${
                                                     index === 1 
                                                         ? 'bg-white text-blue-700 hover:bg-blue-50' 
                                                         : 'bg-blue-600 text-white hover:bg-blue-700'
                                                 }`}
                                             >
-                                                {index === 1 ? 'Pilih Paket Ini' : 'Berlangganan'}
-                                            </Link>
+                                                <InformationCircleIcon className="w-5 h-5" />
+                                                <span>Detail Paket</span>
+                                            </button>
                                     </div>
                                 </Reveal>
                             ))}
@@ -402,11 +451,10 @@ export default function Welcome({ auth, packages }) {
                     </div>
                 </section>
 
-                {/* --- CONTACT & LOCATION SECTION --- */}
+                {/* --- CONTACT SECTION --- */}
                 <section id="lokasi" className="py-24 bg-white">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            
                             {/* Contact Info */}
                             <Reveal>
                                 <div>
@@ -480,7 +528,6 @@ export default function Welcome({ auth, packages }) {
                                     </div>
                                 </div>
                             </Reveal>
-
                         </div>
                     </div>
                 </section>
@@ -492,14 +539,12 @@ export default function Welcome({ auth, packages }) {
                             <div className="col-span-1 md:col-span-2">
                                 <div className="flex items-center gap-3 mb-6">
                                     <ApplicationLogo className="h-10 w-auto text-blue-600 fill-current" />
-                                    {/* PERUBAHAN NAMA BRAND DISINI */}
                                     <span className="text-2xl font-bold text-white">Filltech Berkah Bersama</span>
                                 </div>
                                 <p className="max-w-sm text-slate-400 leading-relaxed mb-6">
                                     Penyedia layanan internet fiber optic terpercaya di Batam. Fokus kami adalah kualitas jaringan yang stabil dan pelayanan yang memanusiakan pelanggan.
                                 </p>
                                 <div className="flex gap-4">
-                                    {/* Social Placeholders */}
                                     {[1, 2, 3].map(i => (
                                         <div key={i} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
                                             <GlobeAsiaAustraliaIcon className="w-5 h-5" />
@@ -535,6 +580,80 @@ export default function Welcome({ auth, packages }) {
                         </div>
                     </div>
                 </footer>
+
+                {/* --- MODAL DETAIL PAKET --- */}
+                {isModalOpen && selectedPackage && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        {/* Backdrop Gelap */}
+                        <div 
+                            className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" 
+                            onClick={closeModal}
+                        ></div>
+                        
+                        {/* Konten Modal */}
+                        <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
+                            {/* Header Modal */}
+                            <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-white">{selectedPackage.name}</h3>
+                                    <p className="text-blue-100 text-sm mt-1">{selectedPackage.description}</p>
+                                </div>
+                                <button onClick={closeModal} className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1">
+                                    <XMarkIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {/* Body Modal */}
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
+                                    <div>
+                                        <p className="text-slate-500 text-xs uppercase tracking-wide">Harga Paket</p>
+                                        <p className="text-3xl font-bold text-slate-800">{formatRupiah(selectedPackage.price)}<span className="text-sm font-normal text-slate-500">/bln</span></p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-slate-500 text-xs uppercase tracking-wide">Kecepatan</p>
+                                        <p className="text-3xl font-bold text-blue-600">{selectedPackage.speed}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mb-8">
+                                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                        <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                                        Benefit & Spesifikasi:
+                                    </h4>
+                                    <ul className="space-y-3">
+                                        {/* Tampilkan Detail Unik jika ada, jika tidak tampilkan default */}
+                                        {(selectedPackage.details || [
+                                            'Unlimited Tanpa FUP', 
+                                            'Gratis Modem', 
+                                            'Support Teknis 24 Jam', 
+                                            'Instalasi Cepat'
+                                        ]).map((detail, idx) => (
+                                            <li key={idx} className="flex items-start gap-3 text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                                <div className="mt-0.5 min-w-[1rem]">
+                                                    <CheckCircleIcon className="w-4 h-4 text-blue-500" />
+                                                </div>
+                                                <span className="text-sm leading-relaxed">{detail}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* Tombol Aksi */}
+                                <Link 
+                                    href={auth.user ? route('client.subscribe.index') : route('register')}
+                                    className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2"
+                                >
+                                    <span>Lanjut Berlangganan</span>
+                                    <ArrowRightIcon className="w-5 h-5" />
+                                </Link>
+                                <p className="text-center text-xs text-slate-400 mt-4">
+                                    *Syarat & Ketentuan berlaku. Harga belum termasuk PPN.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div>
         </>

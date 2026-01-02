@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Str; // WAJIB ADA
 
 class ProfileController extends Controller
 {
@@ -25,51 +26,55 @@ class ProfileController extends Controller
 
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        // 1. Tambahkan Validasi Khusus untuk Alamat
+        // 1. Validasi
         $request->validate([
-            'alamat' => ['required', 'string', 'max:255'],
-            'rt' => ['required', 'string', 'size:3'], // Wajib 3 karakter (angka)
-            'rw' => ['required', 'string', 'max:10'], // RW bebas (text/angka)
-            'blok' => ['required', 'string', 'max:10'],
-            'nomor_rumah' => ['required', 'string', 'max:10'],
+            'alamat' => ['nullable', 'string', 'max:255'],
+            'rt' => ['nullable', 'string', 'max:5'], 
+            'rw' => ['nullable', 'string', 'max:50'], 
+            'blok' => ['nullable', 'string', 'max:10'],
+            'nomor_rumah' => ['nullable', 'string', 'max:10'],
         ]);
 
         $user = $request->user();
         
-        // Ambil data yang divalidasi dari ProfileUpdateRequest (Name, Email) & Request di atas
-        $data = $request->except(['password', 'password_confirmation']);
+        $data = $request->except(['password', 'password_confirmation', 'id_unik']);
         $user->fill($data);
 
-        // 2. Handle Password jika diisi
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
 
-        // 3. Logic ID UNIK (Hanya jika belum punya)
-        if (!$user->id_unik && $request->rt && $request->rw && $request->blok && $request->nomor_rumah) {
-            $datePrefix = now()->format('Ymd');
+        // --- LOGIKA PERBAIKAN ID (SMART FIX) ---
+        
+        // Cek 1: Apakah ID Kosong? (User baru daftar dengan Model User baru)
+        $idKosong = empty($user->id_unik);
+        
+        // Cek 2: Apakah ID Cacat? (User lama yang kena bug kemarin, mengandung 'RW-' atau 'RT-' tanpa isi)
+        $idCacat = Str::contains((string)$user->id_unik, 'RW-') || Str::contains((string)$user->id_unik, 'RT-');
+
+        // Cek 3: Apakah User sudah mengisi data alamat lengkap di form sekarang?
+        $alamatLengkap = $request->filled(['rt', 'rw', 'nomor_rumah']);
+
+        // EKSEKUSI: Jika (Kosong ATAU Cacat) DAN (Alamat Lengkap) -> GENERATE!
+        if ($user->role === 'client' && ($idKosong || $idCacat) && $alamatLengkap) {
             
-            // RT: Dipaksa 3 digit (contoh: 1 -> 001)
-            $rt = str_pad($request->rt, 3, '0', STR_PAD_LEFT);
+            // Set data object user agar generator membaca data terbaru
+            $user->rt = $request->rt;
+            $user->rw = $request->rw;
+            $user->blok = $request->blok;
+            $user->nomor_rumah = $request->nomor_rumah;
             
-            // RW: Text Bebas, hanya di-uppercase (contoh: 05A tetap 05A)
-            $rw = strtoupper($request->rw); 
-            
-            $blok = strtoupper($request->blok);
-            $nomorRumah = strtoupper($request->nomor_rumah);
-            
-            $user->id_unik = "{$datePrefix}_{$rt}_{$rw}_{$blok}{$nomorRumah}";
+            // Generate Ulang
+            $user->id_unik = User::generateIdUnik($user);
         }
         
-        // 4. Reset verifikasi email jika email berubah
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
         $user->save();
 
-        // Redirect kembali ke halaman edit dengan pesan sukses
-        return Redirect::route('profile.edit')->with('success', 'Profil berhasil diperbarui!');
+        return Redirect::route('profile.edit')->with('success', 'Profil diperbarui. ID Pelanggan: ' . $user->id_unik);
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -79,11 +84,8 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-
         Auth::logout();
-
         $user->delete();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

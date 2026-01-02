@@ -50,23 +50,5 @@ class UserSeeder extends Seeder{
             'rw'                => '005',
         ]);
 
-        // 3. BUAT CLIENT DUMMY (Untuk Test Laporan & Filter)
-        // Kita buat 5 client random menggunakan Factory (jika ada) atau loop manual
-        for ($i = 1; $i <= 5; $i++) {
-            User::create([
-                'name'              => "Client Test $i",
-                'email'             => "client$i@gmail.com",
-                'password'          => bcrypt('password'),
-                'role'              => 'client',
-                'email_verified_at' => now(),
-                'phone_number'      => '08571234567' . $i,
-                
-                'alamat'            => 'Jl. Melati Indah',
-                'blok'              => 'C',
-                'nomor_rumah'       => 10 + $i, // 11, 12, dst
-                'rt'                => '003',
-                'rw'                => '008',   // RW 008 (Bisa dites di filter nanti)
-            ]);
         }
     }
-}
