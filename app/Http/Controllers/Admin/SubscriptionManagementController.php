@@ -5,13 +5,23 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Subscription;
-use App\Notifications\NewInvoiceNotification; // Pastikan file ini ada
+use App\Services\BillingCalculator; // [WAJIB] Import Service Calculator
+use App\Notifications\NewInvoiceNotification;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
 class SubscriptionManagementController extends Controller
 {
+    protected $billingCalculator;
+
+    // Inject Service Calculator agar sistem perhitungan robust & terpisah
+    public function __construct(BillingCalculator $billingCalculator)
+    {
+        $this->billingCalculator = $billingCalculator;
+    }
+
     public function index(Request $request)
     {
         $query = Subscription::with(['user', 'package']);
@@ -56,8 +66,9 @@ class SubscriptionManagementController extends Controller
     public function storeInstallationInvoice(Request $request, Subscription $subscription)
     {
         $user = $subscription->user;
+        $package = $subscription->package;
 
-        // Cek Double Invoice
+        // 1. Cek Double Invoice (Mencegah Admin klik 2x)
         $existingInvoice = $user->invoices()
             ->where('type', 'installation')
             ->whereIn('status', ['pending', 'paid'])
@@ -68,27 +79,59 @@ class SubscriptionManagementController extends Controller
                 ->with('error', 'Klien ini sudah memiliki tagihan instalasi.');
         }
 
-        $amount = $subscription->package->price;
+        // 2. [ROBUST SYSTEM] Hitung Prorata menggunakan Service
+        $now = Carbon::now();
+        
+        // Panggil service untuk menghitung harga (Logika pembulatan ada di Service)
+        $calculation = $this->billingCalculator->calculateProrata($package->price, $now);
+        
+        $proratedAmount = $calculation['amount']; // Hasil sudah dibulatkan
+        $remainingDays = $calculation['remaining_days'];
 
-        // [PENTING] user_id wajib diisi agar muncul di dashboard client
+        // Ambil biaya pasang tambahan dari request (jika ada input manual)
+        // Default 0 jika tidak ada input
+        $installationFee = $request->input('installation_fee', 0); 
+        
+        $totalAmount = $proratedAmount + $installationFee;
+
+        // 3. Buat Deskripsi Invoice yang Detail & Transparan
+        // Contoh: "Paket Internet 10 Mbps (Prorata 12 Hari) + Biaya Pasang"
+        $description = sprintf(
+            "Tagihan Awal: %s (Prorata %d Hari).\n*Hitungan: (Rp %s / 30) x %d hari. Sudah termasuk pembulatan.",
+            $package->name,
+            $remainingDays,
+            number_format($package->price, 0, ',', '.'),
+            $remainingDays
+        );
+
+        if ($installationFee > 0) {
+            $description .= "\n+ Biaya Instalasi Perangkat";
+        }
+
+        // 4. Simpan ke Database
         $invoice = Invoice::create([
             'user_id' => $user->id, 
             'subscription_id' => $subscription->id,
-            'invoice_number' => 'INV-' . time() . '-' . $user->id,
-            'amount' => $amount,
-            'status' => 'pending',
+            'invoice_number' => 'INV-INST-' . time() . '-' . $user->id, // Format nomor invoice
+            'amount' => $totalAmount,
+            'status' => 'pending', // Menunggu verifikasi admin
             'type' => 'installation',
-            'due_date' => now()->addDays(7),
+            'due_date' => $now->copy()->addDays(3), // Jatuh tempo 3 hari
+            'description' => $description,
+            'period_start' => $now,
+            'period_end' => $now->copy()->endOfMonth(),
         ]);
 
-        // Kirim Notifikasi (Jika class notifikasi sudah dibuat)
+        // 5. Kirim Notifikasi (Safe Block)
         try {
+            // Pastikan class NewInvoiceNotification menerima object Invoice
             $user->notify(new NewInvoiceNotification($invoice));
         } catch (\Exception $e) {
-            // Abaikan error notifikasi jika mail server belum setup, agar invoice tetap terbuat
+            // Log error tapi jangan gagalkan proses pembuatan invoice
+            // \Log::error("Gagal kirim notifikasi invoice: " . $e->getMessage());
         }
 
         return Redirect::route('admin.subscriptions.index')
-            ->with('success', 'Tagihan instalasi berhasil dibuat senilai Rp ' . number_format($amount, 0, ',', '.'));
+            ->with('success', 'Tagihan instalasi (Prorata) berhasil dibuat: Rp ' . number_format($totalAmount, 0, ',', '.'));
     }
 }

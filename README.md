@@ -4,11 +4,11 @@
 ![React](https://img.shields.io/badge/Frontend-React_Inertia-61DAFB?style=for-the-badge&logo=react)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=for-the-badge&logo=postgresql)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-35_Passed-brightgreen?style=for-the-badge)
+![Billing](https://img.shields.io/badge/Billing-Prorata_System-gold?style=for-the-badge)
 
 **Project Owner:** Frengki Simatupang  
 **Last Updated:** Januari 2026  
-**Version:** 1.1.0 (Stable)
+**Version:** 1.2.0 (Stable - Robust Billing)
 
 ---
 
@@ -33,86 +33,136 @@ Project ini dibangun dengan arsitektur **Monolith Modern** menggunakan Inertia.j
 | **Styling** | Tailwind CSS | Utility-first CSS framework |
 | **Database** | PostgreSQL | Support JSON column & advanced indexing |
 | **Auth** | Laravel Breeze + Socialite | Login biasa & Google Login |
-| **PDF Engine** | barryvdh/laravel-dompdf | Generate Invoice/Laporan |
+| **Billing Logic** | Custom Service Class | Perhitungan Prorata & Pembulatan |
 | **Logging** | spatie/laravel-activitylog | Audit Trail aktivitas user |
 
 ---
 
 ## 2. 🏗️ Arsitektur Sistem
 
-Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan dan kerapian kode.
+Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan, dan logika perhitungan dipisah ke **Service Class**.
 
-### 📂 Peta Controller (`app/Http/Controllers/`)
-* **`Admin/`**: Akses penuh (Master Data, Stok Barang, Verifikasi Pembayaran).
-* **`Client/`**: Area pelanggan (Cek Tagihan, Upload Bukti Bayar, Update Profil).
-* **`Teknisi/`**: Area pekerja lapangan (Tugas Instalasi, Absensi, Log Alat).
-* **`Auth/`**: `RegisteredUserController` (Handle pendaftaran user baru).
-* **`ProfileController.php`**: Handle update profil & **Generator ID Unik**.
+### 📂 Struktur Logic
+* **`app/Http/Controllers/`**: Menangani Request & Response.
+    * `Admin/`: Akses penuh (Master Data, Stok, Billing).
+    * `Teknisi/`: Akses lapangan (Tugas, Absensi).
+    * `Client/`: Akses pelanggan (Tagihan, Profil).
+* **`app/Services/`**: Menangani Logika Matematika Kompleks.
+    * `BillingCalculator.php`: Otak perhitungan biaya prorata dan pembulatan uang.
 
 ### 🛡️ Middleware Khusus
-1. **`role:admin|teknisi|client`**: Membatasi akses URL berdasarkan tipe user.
-2. **`clock_in`**: Middleware khusus Teknisi. Teknisi **TIDAK BISA** akses menu tugas/alat sebelum melakukan absensi masuk (Clock-In) pada hari tersebut.
-3. **`profile.complete`**: User tidak bisa masuk dashboard jika alamat belum lengkap.
+1. **`role:admin|teknisi|client`**: Membatasi akses URL.
+2. **`clock_in`**: Teknisi wajib absensi sebelum akses tugas.
+3. **`profile.complete`**: Wajib lengkapi alamat sebelum masuk dashboard.
 
 ---
 
 ## 3. 🧠 Fitur & Logika Bisnis Utama (Core Logic)
 
-Bagian ini menjelaskan logika kompleks yang berjalan di belakang layar.
+Sistem ini dirancang untuk menangani edge-cases di lapangan.
 
-### A. 🆔 Smart ID Generation (ID Pelanggan)
-Fitur unggulan untuk menangani pendaftaran via Google maupun Manual.
-* **Masalah Awal:** User daftar via Google tidak punya alamat -> ID jadi cacat (`RW--RT--`).
-* **Solusi (Current Logic):**
-    1. **Saat Register:** ID Unik dibiarkan `NULL` jika alamat kosong.
-    2. **Saat Update Profil:** Sistem mengecek:
-       * Jika `id_unik` kosong **ATAU**
-       * Jika `id_unik` cacat (mengandung string `RW-` atau `RT-`).
-       * **DAN** User mengisi alamat lengkap.
-       * -> **Maka ID Baru digenerate otomatis.**
-* **Format ID:** `ddmmyy-RW[rw]-RT[rt]-[blok].[no_rumah]` (Contoh: `030126-RW05-RT002-A.10`).
+### A. 💰 Intelligent Billing System (Prorata)
+Sistem tagihan yang adil bagi pelanggan yang mendaftar di tengah bulan.
+* **Masalah:** User daftar tgl 25 masa bayar full 1 bulan? (Tidak Adil).
+* **Solusi:** Menggunakan rumus **Prorata**.
+* **Rumus:** `(Harga Paket / 30) * Sisa Hari`.
+* **Fitur Pembulatan:** Hasil hitungan (misal Rp 6.166) otomatis dibulatkan ke atas menjadi kelipatan 500 terdekat (Rp 6.500) untuk kemudahan administrasi.
+* **Transparansi:** Invoice mencantumkan detail hitungan hari secara otomatis.
 
-### B. 📦 Manajemen Stok (Inventory Safety)
-Mencegah korupsi data stok oleh human error atau sistem error.
-* **Validasi Ketat:** Admin tidak bisa input stok negatif (misal: `-5`). Minimal input adalah `1`.
-* **Atomic Transaction:** Menggunakan `DB::beginTransaction()`. Jika log gagal disimpan, stok barang batal bertambah.
-* **Audit Trail:** Setiap perubahan stok dicatat di tabel `equipment_logs` (stok fisik) dan `activity_logs` (siapa yang mengubah).
+### B. 🆔 Smart ID Generation
+Menangani pendaftaran via Google yang seringkali tanpa alamat.
+* **Logic:** ID Unik (`RW-RT`) hanya digenerate saat user mengisi alamat lengkap.
+* **Format:** `ddmmyy-RW[rw]-RT[rt]-[blok].[no_rumah]`
+* **Self-Healing:** Jika ada ID cacat (RW kosong), sistem otomatis memperbaikinya saat user update profil.
 
-### C. 🔧 Keamanan Operasional Teknisi
-* **Task Isolation:** Teknisi A tidak bisa mengedit/menyelesaikan tugas milik Teknisi B (dicek via Policy/Controller).
-* **Evidence Upload:** Bukti foto wajib diupload saat menyelesaikan tugas. Foto lama otomatis dihapus dari server saat direvisi (Hemat Storage).
+### C. 📦 Manajemen Stok (Inventory Safety)
+* **Atomic Transaction:** Menggunakan `DB::beginTransaction()`. Stok tidak akan berkurang/tambah jika pencatatan log gagal.
+* **Validasi:** Admin tidak bisa input stok negatif.
 
-### D. 💸 Alur Pembayaran Otomatis
-1. Admin klik **"Verifikasi Pembayaran"**.
-2. Sistem update status Invoice -> `PAID`.
-3. Sistem membuat **Task Instalasi Baru** untuk teknisi secara otomatis.
-4. Notifikasi dikirim ke Dashboard Client.
+### D. 🔧 Keamanan Operasional Teknisi
+* **Task Isolation:** Teknisi tidak bisa saling bajak tugas.
+* **Evidence Upload:** Bukti foto wajib ada saat penyelesaian tugas.
 
 ---
 
 ## 4. 💻 Instalasi & Setup Lokal
 
-Ikuti langkah ini untuk menjalankan project di komputer Anda.
-
-1. **Clone Repository**
+1. **Clone & Install**
    ```bash
    git clone [https://github.com/FrengkiSimatupang17/Filltech-Project.git](https://github.com/FrengkiSimatupang17/Filltech-Project.git)
    cd Filltech-Project
-Install DependenciesBashcomposer install
-npm install
-Environment SetupCopy file .env.example menjadi .env dan sesuaikan database:Bashcp .env.example .env
-php artisan key:generate
-Pastikan setting DB_DATABASE, DB_USERNAME, DB_PASSWORD sesuai PostgreSQL lokal Anda.Database MigrationBashphp artisan migrate --seed
-Run AppBuka 2 terminal berbeda:Terminal 1: php artisan serveTerminal 2: npm run dev5. ✅ Testing & Quality AssuranceProject ini dilengkapi dengan 35 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.Cara Menjalankan TestBashphp artisan test
-Cakupan Test UtamaModulDeskripsi TestStatusUser ProfileCek logika ID Unik (Register Null -> Update Generate).✅ PASSEquipmentCek validasi stok negatif & pencatatan log admin.✅ PASSTechnicianCek keamanan akses tugas & upload foto bukti.✅ PASSAuthCek Login, Register, & Reset Password.✅ PASS6. 📂 Panduan Import Data PelangganJika Anda memiliki data pelanggan lama (Excel/CSV), gunakan fitur Seeder khusus yang sudah disiapkan.Siapkan File CSVPastikan format CSV sesuai (ID, Nama, Alamat, dll).Simpan FileLetakkan file di storage/app/clients.csv.Jalankan CommandBashphp artisan db:seed --class=ImportClientSeeder
-Note: Script ini aman dijalankan karena menggunakan updateOrCreate dan tidak akan merusak ID Unik yang sudah ada.7. 🚀 Deployment (Railway/VPS)Environment Variables Wajib (Production)Pastikan variabel ini diset di server:Code snippetAPP_ENV=production
-APP_DEBUG=false
-APP_URL=[https://filltech.up.railway.app](https://filltech.up.railway.app)
-DB_CONNECTION=pgsql
-# ... Credential Database ...
-Build CommandSaat deploy, pastikan perintah ini dijalankan:Bashcomposer install --no-dev --optimize-autoloader
-php artisan migrate --force
-npm run build
-php artisan config:cache
-php artisan route:cache
-Filltech Project Internal Documentation Dilarang menyebarkan source code ini tanpa izin Project Owner.
+   composer install
+   npm install
+
+
+2. **Install Dependencies**
+   ```bash
+   composer install
+   npm install
+
+3. **Environment Setup Copy file .env.example menjadi .env dan sesuaikan database**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+
+4. **Database Migration**
+   ```bash
+   php artisan migrate --seed
+
+5. **Run App Buka 2 terminal berbeda**
+   Terminal 1: php artisan serve
+   Terminal 2: npm run dev
+
+---
+
+## 5. ✅ Testing & Quality Assurance
+Project ini dilengkapi dengan 35 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.
+
+1. **Cara Menjalankan Test**
+   ```bash
+   php artisan test
+
+2. **Cakupan Test Utama**
+   Modul,Deskripsi Test,Status
+   User Profile,Cek logika ID Unik (Register Null -> Update Generate).,✅ PASS
+   Equipment,Cek validasi stok negatif & pencatatan log admin.,✅ PASS
+   Technician,Cek keamanan akses tugas & upload foto bukti.,✅ PASS
+   Auth,"Cek Login, Register, & Reset Password.",✅ PASS
+
+---
+
+## 6. 📂 Panduan Import Data Pelanggan
+Jika Anda memiliki data pelanggan lama (Excel/CSV), gunakan fitur Seeder khusus yang sudah disiapkan.
+
+1. Siapkan File CSV Pastikan format CSV sesuai (ID, Nama, Alamat, dll).
+2. Simpan File Letakkan file di storage/app/clients.csv.
+3. Jalankan Command
+   ```bash
+   php artisan db:seed --class=ImportClientSeeder
+
+---
+
+## 7. 🚀 Deployment (Railway/VPS)
+
+1. **Environment Variables Wajib (Production)**
+   Pastikan variabel ini diset di server:
+
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=[https://filltech.up.railway.app](https://filltech.up.railway.app)
+   DB_CONNECTION=pgsql
+   # ... Credential Database ...
+
+2. **Build Command**
+   Saat deploy, pastikan perintah ini dijalankan:
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   php artisan migrate --force
+   npm run build
+   php artisan config:cache
+   php artisan route:cache
+
+---
+
+
+Filltech Project Internal Documentation Hak Cipta © 2026 Frengki Simatupang.
