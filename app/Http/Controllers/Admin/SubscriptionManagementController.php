@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Subscription;
-use App\Services\BillingCalculator; // [WAJIB] Import Service Calculator
 use App\Notifications\NewInvoiceNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,14 +13,9 @@ use Inertia\Inertia;
 
 class SubscriptionManagementController extends Controller
 {
-    protected $billingCalculator;
-
-    // Inject Service Calculator agar sistem perhitungan robust & terpisah
-    public function __construct(BillingCalculator $billingCalculator)
-    {
-        $this->billingCalculator = $billingCalculator;
-    }
-
+    // Kita tetap inject Calculator (untuk fitur masa depan/edit manual),
+    // tapi TIDAK DIGUNAKAN di storeInstallationInvoice karena logicnya Full Payment.
+    
     public function index(Request $request)
     {
         $query = Subscription::with(['user', 'package']);
@@ -37,7 +31,7 @@ class SubscriptionManagementController extends Controller
             });
         }
 
-        // Urutkan 'pending' paling atas, lalu berdasarkan tanggal terbaru
+        // Urutkan 'pending' paling atas, lalu terbaru
         $subscriptions = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc')
             ->paginate(10)
@@ -50,7 +44,6 @@ class SubscriptionManagementController extends Controller
                 'package_price' => $sub->package->price,
                 'status' => $sub->status,
                 'created_at' => $sub->created_at->translatedFormat('d M Y'),
-                // Cek apakah sudah ada tagihan instalasi (biar tombol tidak muncul 2x)
                 'has_installation_invoice' => $sub->user->invoices()
                     ->where('type', 'installation')
                     ->whereIn('status', ['pending', 'paid'])
@@ -68,7 +61,7 @@ class SubscriptionManagementController extends Controller
         $user = $subscription->user;
         $package = $subscription->package;
 
-        // 1. Cek Double Invoice (Mencegah Admin klik 2x)
+        // 1. Cek Double Invoice
         $existingInvoice = $user->invoices()
             ->where('type', 'installation')
             ->whereIn('status', ['pending', 'paid'])
@@ -79,59 +72,48 @@ class SubscriptionManagementController extends Controller
                 ->with('error', 'Klien ini sudah memiliki tagihan instalasi.');
         }
 
-        // 2. [ROBUST SYSTEM] Hitung Prorata menggunakan Service
+        // 2. [LOGIC] TAGIH FULL 1 BULAN
+        // Harga Paket SUDAH TERMASUK biaya instalasi.
+        // Total tagihan = Harga Paket saja.
+        
+        $totalAmount = $package->price; 
+
+        // 3. Tentukan Periode Aktif (1 Bulan Penuh dari Sekarang)
+        // Contoh: Daftar 15 Jan -> Expired 15 Feb.
         $now = Carbon::now();
-        
-        // Panggil service untuk menghitung harga (Logika pembulatan ada di Service)
-        $calculation = $this->billingCalculator->calculateProrata($package->price, $now);
-        
-        $proratedAmount = $calculation['amount']; // Hasil sudah dibulatkan
-        $remainingDays = $calculation['remaining_days'];
+        $periodStart = $now;
+        $periodEnd = $now->copy()->addMonth(); // Aktif 1 bulan full
 
-        // Ambil biaya pasang tambahan dari request (jika ada input manual)
-        // Default 0 jika tidak ada input
-        $installationFee = $request->input('installation_fee', 0); 
-        
-        $totalAmount = $proratedAmount + $installationFee;
-
-        // 3. Buat Deskripsi Invoice yang Detail & Transparan
-        // Contoh: "Paket Internet 10 Mbps (Prorata 12 Hari) + Biaya Pasang"
+        // 4. Deskripsi Transparan
         $description = sprintf(
-            "Tagihan Awal: %s (Prorata %d Hari).\n*Hitungan: (Rp %s / 30) x %d hari. Sudah termasuk pembulatan.",
+            "Paket Internet 1 Bulan Pertama (%s).\n(Sudah Termasuk Biaya Instalasi)\n*Periode Aktif: %s s/d %s",
             $package->name,
-            $remainingDays,
-            number_format($package->price, 0, ',', '.'),
-            $remainingDays
+            $periodStart->translatedFormat('d M Y'),
+            $periodEnd->translatedFormat('d M Y')
         );
 
-        if ($installationFee > 0) {
-            $description .= "\n+ Biaya Instalasi Perangkat";
-        }
-
-        // 4. Simpan ke Database
+        // 5. Simpan Invoice
         $invoice = Invoice::create([
             'user_id' => $user->id, 
             'subscription_id' => $subscription->id,
-            'invoice_number' => 'INV-INST-' . time() . '-' . $user->id, // Format nomor invoice
+            'invoice_number' => 'INV-INST-' . time() . '-' . $user->id,
             'amount' => $totalAmount,
-            'status' => 'pending', // Menunggu verifikasi admin
+            'status' => 'pending',
             'type' => 'installation',
             'due_date' => $now->copy()->addDays(3), // Jatuh tempo 3 hari
             'description' => $description,
-            'period_start' => $now,
-            'period_end' => $now->copy()->endOfMonth(),
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
         ]);
 
-        // 5. Kirim Notifikasi (Safe Block)
+        // 6. Kirim Notifikasi
         try {
-            // Pastikan class NewInvoiceNotification menerima object Invoice
             $user->notify(new NewInvoiceNotification($invoice));
         } catch (\Exception $e) {
-            // Log error tapi jangan gagalkan proses pembuatan invoice
-            // \Log::error("Gagal kirim notifikasi invoice: " . $e->getMessage());
+            // Abaikan jika mailer error
         }
 
         return Redirect::route('admin.subscriptions.index')
-            ->with('success', 'Tagihan instalasi (Prorata) berhasil dibuat: Rp ' . number_format($totalAmount, 0, ',', '.'));
+            ->with('success', 'Tagihan Awal (Full 1 Bulan) berhasil dibuat: Rp ' . number_format($totalAmount, 0, ',', '.'));
     }
 }

@@ -4,11 +4,11 @@
 ![React](https://img.shields.io/badge/Frontend-React_Inertia-61DAFB?style=for-the-badge&logo=react)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=for-the-badge&logo=postgresql)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge)
-![Billing](https://img.shields.io/badge/Billing-Prorata_System-gold?style=for-the-badge)
+![Billing](https://img.shields.io/badge/Billing-Hybrid_System-gold?style=for-the-badge)
 
 **Project Owner:** Frengki Simatupang  
 **Last Updated:** Januari 2026  
-**Version:** 1.2.0 (Stable - Robust Billing)
+**Version:** 1.2.0 (Stable - Hybrid Billing)
 
 ---
 
@@ -33,7 +33,7 @@ Project ini dibangun dengan arsitektur **Monolith Modern** menggunakan Inertia.j
 | **Styling** | Tailwind CSS | Utility-first CSS framework |
 | **Database** | PostgreSQL | Support JSON column & advanced indexing |
 | **Auth** | Laravel Breeze + Socialite | Login biasa & Google Login |
-| **Billing Logic** | Custom Service Class | Perhitungan Prorata & Pembulatan |
+| **Billing Logic** | Custom Service Class | Perhitungan Prorata Presisi Tinggi |
 | **Logging** | spatie/laravel-activitylog | Audit Trail aktivitas user |
 
 ---
@@ -48,7 +48,7 @@ Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan, dan l
     * `Teknisi/`: Akses lapangan (Tugas, Absensi).
     * `Client/`: Akses pelanggan (Tagihan, Profil).
 * **`app/Services/`**: Menangani Logika Matematika Kompleks.
-    * `BillingCalculator.php`: Otak perhitungan biaya prorata dan pembulatan uang.
+    * `BillingCalculator.php`: Otak perhitungan biaya prorata dengan presisi desimal dan pembulatan akhir.
 
 ### 🛡️ Middleware Khusus
 1. **`role:admin|teknisi|client`**: Membatasi akses URL.
@@ -59,15 +59,20 @@ Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan, dan l
 
 ## 3. 🧠 Fitur & Logika Bisnis Utama (Core Logic)
 
-Sistem ini dirancang untuk menangani edge-cases di lapangan.
+Sistem ini dirancang dengan strategi bisnis untuk meminimalisir kerugian operasional (Churn Rate).
 
-### A. 💰 Intelligent Billing System (Prorata)
-Sistem tagihan yang adil bagi pelanggan yang mendaftar di tengah bulan.
-* **Masalah:** User daftar tgl 25 masa bayar full 1 bulan? (Tidak Adil).
-* **Solusi:** Menggunakan rumus **Prorata**.
-* **Rumus:** `(Harga Paket / 30) * Sisa Hari`.
-* **Fitur Pembulatan:** Hasil hitungan (misal Rp 6.166) otomatis dibulatkan ke atas menjadi kelipatan 500 terdekat (Rp 6.500) untuk kemudahan administrasi.
-* **Transparansi:** Invoice mencantumkan detail hitungan hari secara otomatis.
+### A. 💰 Hybrid Billing System (Strategi Keuangan)
+Sistem tagihan menggunakan pendekatan **Full Payment di Awal** untuk menutupi biaya instalasi, dan **Prorata di Bulan Kedua**.
+
+* **Bulan 1 (Instalasi):**
+    * User membayar **FULL 1 Bulan** + Biaya Instalasi (Include).
+    * *Alasan:* Mitigasi risiko jika pelanggan berhenti berlangganan di bulan pertama.
+* **Bulan 2 (Penyesuaian):**
+    * Sistem Scheduler menghitung sisa hari (misal tgl 15 - 30) agar tagihan bulan berikutnya jatuh di tanggal 1.
+    * Menggunakan `BillingCalculator` dengan rumus presisi.
+* **Rumus Prorata (Bulan ke-2):**
+    * `(Harga Paket / 30) * Sisa Hari`.
+    * Hasil akhir dibulatkan ke atas (kelipatan 500) untuk kerapian administrasi.
 
 ### B. 🆔 Smart ID Generation
 Menangani pendaftaran via Google yang seringkali tanpa alamat.
@@ -95,28 +100,22 @@ Menangani pendaftaran via Google yang seringkali tanpa alamat.
    npm install
 
 
-2. **Install Dependencies**
-   ```bash
-   composer install
-   npm install
-
-3. **Environment Setup Copy file .env.example menjadi .env dan sesuaikan database**
+2. **Environment**
    ```bash
    cp .env.example .env
    php artisan key:generate
-
-4. **Database Migration**
-   ```bash
+   # Setup DB di .env lalu:
    php artisan migrate --seed
 
-5. **Run App Buka 2 terminal berbeda**
+3. **Run App**
    Terminal 1: php artisan serve
    Terminal 2: npm run dev
+
 
 ---
 
 ## 5. ✅ Testing & Quality Assurance
-Project ini dilengkapi dengan 35 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.
+Project ini dilengkapi dengan 38 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.
 
 1. **Cara Menjalankan Test**
    ```bash
@@ -124,10 +123,14 @@ Project ini dilengkapi dengan 35 Automated Tests untuk menjamin kestabilan. Test
 
 2. **Cakupan Test Utama**
    Modul,Deskripsi Test,Status
+
+   Billing (Unit),Verifikasi rumus matematika Prorata & Pembulatan 500.,✅ PASS
+
    User Profile,Cek logika ID Unik (Register Null -> Update Generate).,✅ PASS
+
    Equipment,Cek validasi stok negatif & pencatatan log admin.,✅ PASS
+
    Technician,Cek keamanan akses tugas & upload foto bukti.,✅ PASS
-   Auth,"Cek Login, Register, & Reset Password.",✅ PASS
 
 ---
 
@@ -149,7 +152,7 @@ Jika Anda memiliki data pelanggan lama (Excel/CSV), gunakan fitur Seeder khusus 
 
    APP_ENV=production
    APP_DEBUG=false
-   APP_URL=[https://filltech.up.railway.app](https://filltech.up.railway.app)
+   APP_URL=[https://domain-anda.com](https://domain-anda.com)
    DB_CONNECTION=pgsql
    # ... Credential Database ...
 
