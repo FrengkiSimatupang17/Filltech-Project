@@ -14,7 +14,7 @@ use App\Http\Controllers\Admin\TaskManagementController;
 use App\Http\Controllers\Admin\EquipmentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController; // Alias agar tidak bentrok
+use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 
 // --- CLIENT CONTROLLERS ---
 use App\Http\Controllers\Auth\SocialiteController;
@@ -24,8 +24,8 @@ use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Client\ComplaintController;
 
 // --- TEKNISI CONTROLLERS ---
-use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController; // Alias agar tidak bentrok
-use App\Http\Controllers\Teknisi\AttendanceController as TeknisiAttendanceController; // Alias agar tidak bentrok
+use App\Http\Controllers\Teknisi\TaskController as TeknisiTaskController;
+use App\Http\Controllers\Teknisi\AttendanceController as TeknisiAttendanceController;
 use App\Http\Controllers\Teknisi\EquipmentLogController;
 
 use Illuminate\Foundation\Application;
@@ -78,12 +78,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             
             // Equipment Management
             Route::resource('equipment', EquipmentController::class)->except(['show']);
-            // [TAMBAHAN BARU] Route untuk Admin Restock Barang
             Route::post('equipment/{equipment}/restock', [EquipmentController::class, 'restock'])->name('equipment.restock');
 
             // Transaksi & Verifikasi
             Route::get('subscriptions', [SubscriptionManagementController::class, 'index'])->name('subscriptions.index');
             Route::post('subscriptions/{subscription}/invoice', [SubscriptionManagementController::class, 'storeInstallationInvoice'])->name('subscriptions.storeInvoice');
+            
+            // Download Invoice PDF (Admin View)
+            Route::get('invoices/{invoice}/download', [SubscriptionManagementController::class, 'downloadInvoice'])->name('invoices.download');
+
             Route::get('payments', [PaymentVerificationController::class, 'index'])->name('payments.index');
             Route::patch('payments/{payment}', [PaymentVerificationController::class, 'update'])->name('payments.update');
             
@@ -99,7 +102,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('attendance-report/export', [AdminAttendanceController::class, 'export'])->name('attendance.report.export');
             Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
             
-            // Helper View Invoice (Admin view client invoices)
+            // Helper View Invoice (Admin view client invoices list)
+            // Pastikan InvoiceController ini aman untuk admin, atau gunakan controller khusus admin
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index'); 
         });
 
@@ -110,6 +114,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
             Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+            
+            // Download Invoice PDF (Client View)
+            Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
             
             Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
             

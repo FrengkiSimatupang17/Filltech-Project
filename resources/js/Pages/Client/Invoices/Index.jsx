@@ -9,7 +9,8 @@ import InputError from '@/Components/InputError';
 import EmptyState from '@/Components/EmptyState';
 import Pagination from '@/Components/Pagination';
 import ToastNotification from '@/Components/ToastNotification';
-import { FaMoneyBillWave, FaFileUpload, FaCreditCard, FaChevronDown, FaChevronUp, FaCopy, FaImage, FaTrash } from 'react-icons/fa';
+// [TAMBAHAN] Import FaFilePdf untuk icon download
+import { FaMoneyBillWave, FaFileUpload, FaCreditCard, FaChevronDown, FaChevronUp, FaCopy, FaImage, FaTrash, FaFilePdf } from 'react-icons/fa';
 
 export default function Index({ auth, invoices }) {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -157,19 +158,32 @@ export default function Index({ auth, invoices }) {
                                                             <StatusBadge status={inv.status} payment_status={inv.payment_status} />
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                            {inv.status === 'pending' && (!inv.payment_status) && (
-                                                                <button
-                                                                    onClick={() => openPaymentModal(inv)}
-                                                                    className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none transition ease-in-out duration-150"
+                                                            <div className="flex justify-end items-center gap-2">
+                                                                {/* [TAMBAHAN] Button Download PDF Desktop */}
+                                                                <a
+                                                                    href={route('client.invoices.download', inv.id)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2 text-gray-500 hover:text-red-600 transition hover:bg-red-50 rounded-full"
+                                                                    title="Download PDF"
                                                                 >
-                                                                    <FaMoneyBillWave className="mr-2" /> Bayar
-                                                                </button>
-                                                            )}
-                                                            {(inv.status === 'paid' || inv.payment_status === 'pending' || inv.payment_status === 'verified') && (
-                                                                <span className="text-sm text-gray-600 italic font-medium">
-                                                                    {inv.payment_status === 'pending' ? 'Sedang diverifikasi' : 'Selesai'}
-                                                                </span>
-                                                            )}
+                                                                    <FaFilePdf size={18} />
+                                                                </a>
+
+                                                                {inv.status === 'pending' && (!inv.payment_status) && (
+                                                                    <button
+                                                                        onClick={() => openPaymentModal(inv)}
+                                                                        className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none transition ease-in-out duration-150"
+                                                                    >
+                                                                        <FaMoneyBillWave className="mr-2" /> Bayar
+                                                                    </button>
+                                                                )}
+                                                                {(inv.status === 'paid' || inv.payment_status === 'pending' || inv.payment_status === 'verified') && (
+                                                                    <span className="text-sm text-gray-600 italic font-medium ml-2">
+                                                                        {inv.payment_status === 'pending' ? 'Verifikasi...' : 'Selesai'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -202,19 +216,32 @@ export default function Index({ auth, invoices }) {
                                                     </div>
                                                 </div>
 
-                                                {/* Action Button Mobile */}
-                                                {inv.status === 'pending' && (!inv.payment_status) ? (
-                                                    <button
-                                                        onClick={() => openPaymentModal(inv)}
-                                                        className="w-full flex justify-center items-center px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition shadow-sm"
+                                                {/* Action Buttons Mobile */}
+                                                <div className="flex gap-2">
+                                                    {/* [TAMBAHAN] Button Download PDF Mobile */}
+                                                    <a
+                                                        href={route('client.invoices.download', inv.id)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-2 bg-white border border-gray-300 text-red-600 rounded-lg hover:bg-red-50 flex items-center justify-center shadow-sm"
+                                                        title="Download PDF"
                                                     >
-                                                        <FaMoneyBillWave className="mr-2" /> Bayar Sekarang
-                                                    </button>
-                                                ) : (
-                                                    <div className="text-center text-sm text-gray-700 bg-gray-100 py-2 rounded-lg font-medium">
-                                                        {inv.payment_status === 'pending' ? 'Bukti terkirim, menunggu verifikasi' : 'Pembayaran Selesai'}
-                                                    </div>
-                                                )}
+                                                        <FaFilePdf size={20} />
+                                                    </a>
+
+                                                    {inv.status === 'pending' && (!inv.payment_status) ? (
+                                                        <button
+                                                            onClick={() => openPaymentModal(inv)}
+                                                            className="flex-1 flex justify-center items-center px-4 py-3 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition shadow-sm"
+                                                        >
+                                                            <FaMoneyBillWave className="mr-2" /> Bayar Sekarang
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex-1 text-center text-sm text-gray-700 bg-gray-100 py-2 rounded-lg font-medium flex items-center justify-center">
+                                                            {inv.payment_status === 'pending' ? 'Menunggu Verifikasi' : 'Pembayaran Selesai'}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -248,7 +275,7 @@ export default function Index({ auth, invoices }) {
                     <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar">
                         <div className="flex flex-col md:grid md:grid-cols-2 gap-6">
                             
-                            {/* BAGIAN FORM (Order 1 di Mobile agar user langsung lihat input) */}
+                            {/* BAGIAN FORM */}
                             <div className="order-1 md:order-2 bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-300 flex flex-col shadow-inner">
                                 <h3 className="font-bold text-gray-900 mb-4 flex items-center text-lg">
                                     <FaFileUpload className="mr-2 text-indigo-600" /> Konfirmasi Pembayaran
@@ -326,7 +353,7 @@ export default function Index({ auth, invoices }) {
                                 </form>
                             </div>
 
-                            {/* BAGIAN INFO REKENING (Order 2 di Mobile) */}
+                            {/* BAGIAN INFO REKENING */}
                             <div className="order-2 md:order-1 space-y-6">
                                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-center shadow-sm">
                                     <p className="text-xs text-blue-700 font-bold uppercase tracking-widest mb-1">Total Yang Harus Dibayar</p>

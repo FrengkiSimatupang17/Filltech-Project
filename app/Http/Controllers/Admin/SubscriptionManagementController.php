@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Subscription;
+use App\Services\BillingCalculator;
 use App\Notifications\NewInvoiceNotification;
+use Barryvdh\DomPDF\Facade\Pdf; // [WAJIB] Agar fitur download PDF jalan
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -13,9 +15,15 @@ use Inertia\Inertia;
 
 class SubscriptionManagementController extends Controller
 {
+    protected $billingCalculator;
+
     // Kita tetap inject Calculator (untuk fitur masa depan/edit manual),
     // tapi TIDAK DIGUNAKAN di storeInstallationInvoice karena logicnya Full Payment.
-    
+    public function __construct(BillingCalculator $billingCalculator)
+    {
+        $this->billingCalculator = $billingCalculator;
+    }
+
     public function index(Request $request)
     {
         $query = Subscription::with(['user', 'package']);
@@ -115,5 +123,17 @@ class SubscriptionManagementController extends Controller
 
         return Redirect::route('admin.subscriptions.index')
             ->with('success', 'Tagihan Awal (Full 1 Bulan) berhasil dibuat: Rp ' . number_format($totalAmount, 0, ',', '.'));
+    }
+
+    /**
+     * Download Invoice PDF (Admin Access)
+     */
+    public function downloadInvoice($invoiceId)
+    {
+        $invoice = Invoice::with('user')->findOrFail($invoiceId);
+        
+        $pdf = Pdf::loadView('pdf.invoice', ['invoice' => $invoice]);
+        
+        return $pdf->download('invoice-'.$invoice->invoice_number.'.pdf');
     }
 }

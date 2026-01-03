@@ -1,171 +1,173 @@
-# 📡 FILLTECH PROJECT DOCUMENTATION
+# 📡 PT. FILLTECH BERKAH BERSAMA PROJECT DOCUMENTATION (ISP)
 
 ![Laravel](https://img.shields.io/badge/Backend-Laravel_10-FF2D20?style=for-the-badge&logo=laravel)
 ![React](https://img.shields.io/badge/Frontend-React_Inertia-61DAFB?style=for-the-badge&logo=react)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=for-the-badge&logo=postgresql)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge)
-![Billing](https://img.shields.io/badge/Billing-Hybrid_System-gold?style=for-the-badge)
+![Coverage](https://img.shields.io/badge/Tests-44_PASSED-brightgreen?style=for-the-badge)
 
 **Project Owner:** Frengki Simatupang  
 **Last Updated:** Januari 2026  
-**Version:** 1.2.0 (Stable - Hybrid Billing)
+**Version:** 1.2.0 (Stable - Hybrid Billing & Geofencing)
 
 ---
 
-## 📋 Daftar Isi
-1. [Tech Stack](#1-tech-stack)
-2. [Arsitektur Sistem](#2-arsitektur-sistem)
-3. [Fitur & Logika Bisnis Utama](#3-fitur--logika-bisnis-utama-core-logic)
-4. [Instalasi & Setup Lokal](#4-instalasi--setup-lokal)
-5. [Testing & Quality Assurance](#5-testing--quality-assurance)
-6. [Panduan Import Data Pelanggan](#6-panduan-import-data-pelanggan)
-7. [Deployment](#7-deployment)
+## 📖 Ringkasan Project
+**Filltech System** adalah aplikasi manajemen ISP (Internet Service Provider) berbasis web yang dirancang untuk menangani operasional end-to-end, mulai dari pendaftaran pelanggan, penagihan otomatis (billing), manajemen teknisi lapangan, hingga pelaporan keuangan.
+
+Aplikasi ini menggunakan arsitektur **Monolith Modern** dengan **Inertia.js**, memberikan pengalaman SPA (Single Page Application) tanpa kerumitan API terpisah.
 
 ---
 
-## 1. 🛠️ Tech Stack
-Project ini dibangun dengan arsitektur **Monolith Modern** menggunakan Inertia.js untuk pengalaman SPA (Single Page Application).
+## 🛠️ Tech Stack
 
-| Komponen | Teknologi | Keterangan |
-| :--- | :--- | :--- |
-| **Framework** | Laravel 10.x | Core Backend Framework |
-| **Frontend** | React 18 + Inertia.js | Tanpa API terpisah, routing via Laravel |
-| **Styling** | Tailwind CSS | Utility-first CSS framework |
-| **Database** | PostgreSQL | Support JSON column & advanced indexing |
-| **Auth** | Laravel Breeze + Socialite | Login biasa & Google Login |
-| **Billing Logic** | Custom Service Class | Perhitungan Prorata Presisi Tinggi |
-| **Logging** | spatie/laravel-activitylog | Audit Trail aktivitas user |
+### Backend
+* **Framework:** Laravel 10.x
+* **Language:** PHP 8.1+
+* **Database:** PostgreSQL (Production) / SQLite (Testing)
+* **Authentication:** Laravel Breeze (Modified for Multi-role)
+* **PDF Generator:** Barryvdh DomPDF
+* **Excel Export:** Maatwebsite Excel
 
----
-
-## 2. 🏗️ Arsitektur Sistem
-
-Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan, dan logika perhitungan dipisah ke **Service Class**.
-
-### 📂 Struktur Logic
-* **`app/Http/Controllers/`**: Menangani Request & Response.
-    * `Admin/`: Akses penuh (Master Data, Stok, Billing).
-    * `Teknisi/`: Akses lapangan (Tugas, Absensi).
-    * `Client/`: Akses pelanggan (Tagihan, Profil).
-* **`app/Services/`**: Menangani Logika Matematika Kompleks.
-    * `BillingCalculator.php`: Otak perhitungan biaya prorata dengan presisi desimal dan pembulatan akhir.
-
-### 🛡️ Middleware Khusus
-1. **`role:admin|teknisi|client`**: Membatasi akses URL.
-2. **`clock_in`**: Teknisi wajib absensi sebelum akses tugas.
-3. **`profile.complete`**: Wajib lengkapi alamat sebelum masuk dashboard.
+### Frontend
+* **Framework:** React.js
+* **Bridge:** Inertia.js
+* **Styling:** Tailwind CSS + DaisyUI/Flowbite
+* **Icons:** Heroicons
+* **State Management:** React Hooks standard
 
 ---
 
-## 3. 🧠 Fitur & Logika Bisnis Utama (Core Logic)
+## 🚀 Fitur Utama & Logika Bisnis
 
-Sistem ini dirancang dengan strategi bisnis untuk meminimalisir kerugian operasional (Churn Rate).
+### 1. 💰 Hybrid Billing System
+Sistem penagihan cerdas yang menghitung tagihan berdasarkan pemakaian nyata.
+* **Logika Prorata:** Menghitung tagihan harian dengan presisi tinggi jika pelanggan berhenti/mulai di tengah bulan.
+* **Pembulatan:** Otomatis membulatkan total tagihan ke 500 rupiah terdekat untuk memudahkan pembayaran tunai.
+* **Invoice Generator:** Otomatis membuat Invoice PDF profesional dengan detail paket dan status pembayaran.
 
-### A. 💰 Hybrid Billing System (Strategi Keuangan)
-Sistem tagihan menggunakan pendekatan **Full Payment di Awal** untuk menutupi biaya instalasi, dan **Prorata di Bulan Kedua**.
+### 2. 👷 Portal Teknisi & Absensi (Geofencing)
+Modul khusus untuk karyawan lapangan.
+* **Absensi Lokasi:** Teknisi hanya bisa *Clock In* jika berada dalam radius **100 meter** dari kantor (Koordinat terkunci di Controller).
+* **Status Keterlambatan:** Otomatis menandai "Late" dan menghitung menit keterlambatan jika absen di atas jam **08:00 WIB**.
+* **Manajemen Tugas:** Teknisi menerima tiket gangguan, melakukan perbaikan, dan mengunggah bukti foto perbaikan.
+* **Logistik:** Pencatatan pengambilan dan pengembalian alat (Equipment Log).
 
-* **Bulan 1 (Instalasi):**
-    * User membayar **FULL 1 Bulan** + Biaya Instalasi (Include).
-    * *Alasan:* Mitigasi risiko jika pelanggan berhenti berlangganan di bulan pertama.
-* **Bulan 2 (Penyesuaian):**
-    * Sistem Scheduler menghitung sisa hari (misal tgl 15 - 30) agar tagihan bulan berikutnya jatuh di tanggal 1.
-    * Menggunakan `BillingCalculator` dengan rumus presisi.
-* **Rumus Prorata (Bulan ke-2):**
-    * `(Harga Paket / 30) * Sisa Hari`.
-    * Hasil akhir dibulatkan ke atas (kelipatan 500) untuk kerapian administrasi.
+### 3. 👥 Manajemen Pelanggan (Client)
+* **ID Unik Otomatis:** Generate ID pelanggan berdasarkan lokasi rumah (Format: `TGL-RW-RT-NO`).
+* **Middleware Profil:** Memaksa pelanggan melengkapi data (No HP, Alamat, Koordinat) sebelum bisa mengakses fitur lain.
+* **Self-Service:** Pelanggan bisa download invoice, upload bukti bayar, dan melihat status paket sendiri.
 
-### B. 🆔 Smart ID Generation
-Menangani pendaftaran via Google yang seringkali tanpa alamat.
-* **Logic:** ID Unik (`RW-RT`) hanya digenerate saat user mengisi alamat lengkap.
-* **Format:** `ddmmyy-RW[rw]-RT[rt]-[blok].[no_rumah]`
-* **Self-Healing:** Jika ada ID cacat (RW kosong), sistem otomatis memperbaikinya saat user update profil.
-
-### C. 📦 Manajemen Stok (Inventory Safety)
-* **Atomic Transaction:** Menggunakan `DB::beginTransaction()`. Stok tidak akan berkurang/tambah jika pencatatan log gagal.
-* **Validasi:** Admin tidak bisa input stok negatif.
-
-### D. 🔧 Keamanan Operasional Teknisi
-* **Task Isolation:** Teknisi tidak bisa saling bajak tugas.
-* **Evidence Upload:** Bukti foto wajib ada saat penyelesaian tugas.
+### 4. 📊 Laporan & Admin Panel
+* **Financial Report:** Export pendapatan bulanan ke Excel.
+* **Attendance Report:** Rekap kehadiran teknisi (Masuk, Pulang, Telat, Lokasi).
+* **Activity Log:** Mencatat siapa melakukan apa (Audit Trail) untuk keamanan data.
 
 ---
 
-## 4. 💻 Instalasi & Setup Lokal
+## ⚙️ Instalasi & Setup Lokal
 
-1. **Clone & Install**
-   ```bash
-   git clone [https://github.com/FrengkiSimatupang17/Filltech-Project.git](https://github.com/FrengkiSimatupang17/Filltech-Project.git)
-   cd Filltech-Project
-   composer install
-   npm install
+Ikuti langkah ini untuk menjalankan project di komputer lokal.
 
+### Prasyarat
+* PHP >= 8.1
+* Composer
+* Node.js & NPM
+* PostgreSQL
 
-2. **Environment**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   # Setup DB di .env lalu:
-   php artisan migrate --seed
+### Langkah-langkah
+1.  **Clone Repository**
+    ```bash
+    git clone [https://github.com/username/filltech-project.git](https://github.com/username/filltech-project.git)
+    cd filltech-project
+    ```
 
-3. **Run App**
-   Terminal 1: php artisan serve
-   Terminal 2: npm run dev
+2.  **Install Dependencies**
+    ```bash
+    composer install
+    npm install
+    ```
 
+3.  **Environment Setup**
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    *Edit file `.env` dan sesuaikan kredensial Database PostgreSQL Anda.*
 
----
+4.  **Database Migration & Seeding**
+    ```bash
+    php artisan migrate --seed
+    ```
+    *User default:*
+    * Admin: `admin@example.com` / `password`
+    * Teknisi: `teknisi@example.com` / `password`
 
-## 5. ✅ Testing & Quality Assurance
-Project ini dilengkapi dengan 38 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.
+5.  **Storage Link (Penting untuk Foto/Avatar)**
+    ```bash
+    php artisan storage:link
+    ```
 
-1. **Cara Menjalankan Test**
-   ```bash
-   php artisan test
-
-2. **Cakupan Test Utama**
-   Modul,Deskripsi Test,Status
-
-   Billing (Unit),Verifikasi rumus matematika Prorata & Pembulatan 500.,✅ PASS
-
-   User Profile,Cek logika ID Unik (Register Null -> Update Generate).,✅ PASS
-
-   Equipment,Cek validasi stok negatif & pencatatan log admin.,✅ PASS
-
-   Technician,Cek keamanan akses tugas & upload foto bukti.,✅ PASS
-
----
-
-## 6. 📂 Panduan Import Data Pelanggan
-Jika Anda memiliki data pelanggan lama (Excel/CSV), gunakan fitur Seeder khusus yang sudah disiapkan.
-
-1. Siapkan File CSV Pastikan format CSV sesuai (ID, Nama, Alamat, dll).
-2. Simpan File Letakkan file di storage/app/clients.csv.
-3. Jalankan Command
-   ```bash
-   php artisan db:seed --class=ImportClientSeeder
+6.  **Jalankan Aplikasi**
+    ```bash
+    npm run dev
+    php artisan serve
+    ```
 
 ---
 
-## 7. 🚀 Deployment (Railway/VPS)
+## 🧪 Testing & Quality Assurance
 
-1. **Environment Variables Wajib (Production)**
-   Pastikan variabel ini diset di server:
+Project ini memiliki cakupan test yang luas (Unit & Feature) untuk memastikan kestabilan fitur vital.
 
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=[https://domain-anda.com](https://domain-anda.com)
-   DB_CONNECTION=pgsql
-   # ... Credential Database ...
+**Cara Menjalankan Test:**
+```bash
+php artisan test
+```
 
-2. **Build Command**
-   Saat deploy, pastikan perintah ini dijalankan:
-   ```bash
-   composer install --no-dev --optimize-autoloader
-   php artisan migrate --force
-   npm run build
-   php artisan config:cache
-   php artisan route:cache
+**Modul yang Ditest:**
+
+| Modul | Deskripsi | Status | | :--- | :--- | :--- | | Billing (Unit) | Validasi rumus matematika tarif harian & pembulatan. | ✅ PASS |
+| Auth Flow | Login, Register, Reset Password, Role Redirection. | ✅ PASS |
+| Profile Logic | Generate ID Unik, Validasi kelengkapan profil. | ✅ PASS |
+| Invoice PDF | Validasi akses download (Authorization Policy). | ✅ PASS |
+| Attendance | Validasi akses export laporan (Admin Only). | ✅ PASS |
+| Equipment | Mencegah stok alat menjadi negatif. | ✅ PASS |
 
 ---
 
+## 📂 Struktur Database Penting
 
-Filltech Project Internal Documentation Hak Cipta © 2026 Frengki Simatupang.
+1. users: Menyimpan data Admin, Teknisi, dan Client (dibedakan kolom role).
+2. subscriptions: Menyimpan langganan aktif paket internet user.
+3. invoices: Tagihan bulanan (relasi ke users dan subscriptions).
+4. payments: Bukti bayar yang diupload user.
+5. attendances: Data absen teknisi (clock_in, clock_out, lat/long, status_arrival).
+6. equipment_logs: Riwayat keluar masuk barang inventaris.
+
+---
+
+## 🚀 Deployment (Production)
+
+Untuk deploy ke VPS atau Railway:
+
+1. Pastikan variabel .env production diset (APP_ENV=production, APP_DEBUG=false).
+
+2. alankan optimasi:
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+3. Jalankan migrasi database:
+```bash
+php artisan migrate --force
+```
+
+---
+
+## 📄 Lisensi
+
+Project ini adalah properti intelektual Frengki Simatupang. Dilarang mendistribusikan ulang tanpa izin.
