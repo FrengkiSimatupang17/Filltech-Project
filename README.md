@@ -1,77 +1,118 @@
-# 🔒 FILLTECH INTERNAL DOCUMENTATION
+# 📡 FILLTECH PROJECT DOCUMENTATION
 
-**Project Owner:** Frengki Simatupang
-**Last Updated:** November 2025
-**Status:** Production Ready (v1.0)
+![Laravel](https://img.shields.io/badge/Backend-Laravel_10-FF2D20?style=for-the-badge&logo=laravel)
+![React](https://img.shields.io/badge/Frontend-React_Inertia-61DAFB?style=for-the-badge&logo=react)
+![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=for-the-badge&logo=postgresql)
+![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-35_Passed-brightgreen?style=for-the-badge)
 
----
-
-## 1. 🛠️ Tech Stack & Versi
-Penting untuk maintenance di masa depan.
-* **Framework:** Laravel 10.x / 11.x
-* **Frontend:** React 18 + Inertia.js 2.0
-* **CSS:** Tailwind CSS + Headless UI
-* **Database:** PostgreSQL (Production/Local)
-* **PDF Engine:** barryvdh/laravel-dompdf
-* **Runtime:** PHP 8.2+, Node.js 18+
+**Project Owner:** Frengki Simatupang  
+**Last Updated:** Januari 2026  
+**Version:** 1.1.0 (Stable)
 
 ---
 
-## 2. 🏗️ Arsitektur & Struktur Kode
-
-Aplikasi menggunakan pola **Monolith MVC** dengan pemisahan folder Controller berdasarkan **Role**.
-
-### Peta Controller (`app/Http/Controllers/`)
-* **`Admin/`**: Logika untuk Administrator (CRUD Master Data, Verifikasi, Laporan).
-* **`Client/`**: Logika untuk Pelanggan (Lihat Tagihan, Upload Bukti, Komplain).
-* **`Teknisi/`**: Logika untuk Pekerja Lapangan (Absensi, Tugas, Alat).
-* **`Auth/`**: Logika Login/Register (termasuk pemisahan Login Admin & User Biasa).
-* **`DashboardController.php`**: *Single Point of Entry* untuk mengarahkan user ke dashboard yang sesuai role-nya.
-
-### Middleware Khusus
-* **`RequireClockIn`**: Mencegah teknisi mengakses menu Tugas/Alat jika belum melakukan Clock-In hari ini.
-* **`SecurityHeaders`**: Mengatur CSP dan header keamanan (Mode Strict di Production, Longgar di Local).
+## 📋 Daftar Isi
+1. [Tech Stack](#1-tech-stack)
+2. [Arsitektur Sistem](#2-arsitektur-sistem)
+3. [Fitur & Logika Bisnis Utama](#3-fitur--logika-bisnis-utama-core-logic)
+4. [Instalasi & Setup Lokal](#4-instalasi--setup-lokal)
+5. [Testing & Quality Assurance](#5-testing--quality-assurance)
+6. [Panduan Import Data Pelanggan](#6-panduan-import-data-pelanggan)
+7. [Deployment](#7-deployment)
 
 ---
 
-## 3. 🧠 Logika Bisnis Utama (Core Business Logic)
+## 1. 🛠️ Tech Stack
+Project ini dibangun dengan arsitektur **Monolith Modern** menggunakan Inertia.js untuk pengalaman SPA (Single Page Application).
 
-Bagian ini menjelaskan alur kompleks yang terjadi di balik layar.
-
-### A. Alur Pendaftaran & Langganan
-1.  Client Register -> Masuk ke `users` (Role: client).
-2.  Client pilih paket di `/subscribe` -> Masuk ke tabel `subscriptions` (Status: `pending`).
-3.  Notifikasi sistem dikirim ke Admin.
-
-### B. Alur Verifikasi Pembayaran (Automated Chain)
-Logic ini ada di `PaymentVerificationController@approvePayment`.
-Ketika Admin klik **"Terima"**, sistem melakukan **Database Transaction** yang memicu 5 hal sekaligus:
-1.  Update `payments.status` -> `verified`.
-2.  Update `invoices.status` -> `paid`.
-3.  Jika ini pembayaran instalasi -> Update `subscriptions.status` -> `active`.
-4.  **Auto-Create Task:** Membuat tugas `installation` baru untuk teknisi (Status: `assigned`, Priority: `high`).
-5.  Kirim Notifikasi WA ke Client.
-
-### C. Automasi Tagihan Bulanan
-* **File:** `app/Console/Commands/GenerateMonthlyInvoices.php`
-* **Jadwal:** Berjalan setiap tanggal 1 pukul 01:00 (via Scheduler).
-* **Logic:** Mencari semua `Subscription` aktif, lalu membuat `Invoice` tipe `monthly` untuk bulan berjalan. Menggunakan `chunk(100)` untuk hemat memori.
-
-### D. Absensi Teknisi
-* Teknisi **WAJIB** Clock-In untuk membuka menu lain.
-* Keterlambatan dihitung otomatis di Model `Attendance` (Accessor `is_late`) jika Clock-In > 08:00 WIB.
+| Komponen | Teknologi | Keterangan |
+| :--- | :--- | :--- |
+| **Framework** | Laravel 10.x | Core Backend Framework |
+| **Frontend** | React 18 + Inertia.js | Tanpa API terpisah, routing via Laravel |
+| **Styling** | Tailwind CSS | Utility-first CSS framework |
+| **Database** | PostgreSQL | Support JSON column & advanced indexing |
+| **Auth** | Laravel Breeze + Socialite | Login biasa & Google Login |
+| **PDF Engine** | barryvdh/laravel-dompdf | Generate Invoice/Laporan |
+| **Logging** | spatie/laravel-activitylog | Audit Trail aktivitas user |
 
 ---
 
-## 4. 🚀 Deployment Cheat Sheet (Railway)
+## 2. 🏗️ Arsitektur Sistem
 
-Panduan cepat jika harus deploy ulang atau pindah server.
+Struktur folder controller dipisahkan berdasarkan **Role** untuk keamanan dan kerapian kode.
 
-### Environment Variables (Production)
-Pastikan variabel ini ada di Railway:
-```env
-APP_ENV=production
+### 📂 Peta Controller (`app/Http/Controllers/`)
+* **`Admin/`**: Akses penuh (Master Data, Stok Barang, Verifikasi Pembayaran).
+* **`Client/`**: Area pelanggan (Cek Tagihan, Upload Bukti Bayar, Update Profil).
+* **`Teknisi/`**: Area pekerja lapangan (Tugas Instalasi, Absensi, Log Alat).
+* **`Auth/`**: `RegisteredUserController` (Handle pendaftaran user baru).
+* **`ProfileController.php`**: Handle update profil & **Generator ID Unik**.
+
+### 🛡️ Middleware Khusus
+1. **`role:admin|teknisi|client`**: Membatasi akses URL berdasarkan tipe user.
+2. **`clock_in`**: Middleware khusus Teknisi. Teknisi **TIDAK BISA** akses menu tugas/alat sebelum melakukan absensi masuk (Clock-In) pada hari tersebut.
+3. **`profile.complete`**: User tidak bisa masuk dashboard jika alamat belum lengkap.
+
+---
+
+## 3. 🧠 Fitur & Logika Bisnis Utama (Core Logic)
+
+Bagian ini menjelaskan logika kompleks yang berjalan di belakang layar.
+
+### A. 🆔 Smart ID Generation (ID Pelanggan)
+Fitur unggulan untuk menangani pendaftaran via Google maupun Manual.
+* **Masalah Awal:** User daftar via Google tidak punya alamat -> ID jadi cacat (`RW--RT--`).
+* **Solusi (Current Logic):**
+    1. **Saat Register:** ID Unik dibiarkan `NULL` jika alamat kosong.
+    2. **Saat Update Profil:** Sistem mengecek:
+       * Jika `id_unik` kosong **ATAU**
+       * Jika `id_unik` cacat (mengandung string `RW-` atau `RT-`).
+       * **DAN** User mengisi alamat lengkap.
+       * -> **Maka ID Baru digenerate otomatis.**
+* **Format ID:** `ddmmyy-RW[rw]-RT[rt]-[blok].[no_rumah]` (Contoh: `030126-RW05-RT002-A.10`).
+
+### B. 📦 Manajemen Stok (Inventory Safety)
+Mencegah korupsi data stok oleh human error atau sistem error.
+* **Validasi Ketat:** Admin tidak bisa input stok negatif (misal: `-5`). Minimal input adalah `1`.
+* **Atomic Transaction:** Menggunakan `DB::beginTransaction()`. Jika log gagal disimpan, stok barang batal bertambah.
+* **Audit Trail:** Setiap perubahan stok dicatat di tabel `equipment_logs` (stok fisik) dan `activity_logs` (siapa yang mengubah).
+
+### C. 🔧 Keamanan Operasional Teknisi
+* **Task Isolation:** Teknisi A tidak bisa mengedit/menyelesaikan tugas milik Teknisi B (dicek via Policy/Controller).
+* **Evidence Upload:** Bukti foto wajib diupload saat menyelesaikan tugas. Foto lama otomatis dihapus dari server saat direvisi (Hemat Storage).
+
+### D. 💸 Alur Pembayaran Otomatis
+1. Admin klik **"Verifikasi Pembayaran"**.
+2. Sistem update status Invoice -> `PAID`.
+3. Sistem membuat **Task Instalasi Baru** untuk teknisi secara otomatis.
+4. Notifikasi dikirim ke Dashboard Client.
+
+---
+
+## 4. 💻 Instalasi & Setup Lokal
+
+Ikuti langkah ini untuk menjalankan project di komputer Anda.
+
+1. **Clone Repository**
+   ```bash
+   git clone [https://github.com/FrengkiSimatupang17/Filltech-Project.git](https://github.com/FrengkiSimatupang17/Filltech-Project.git)
+   cd Filltech-Project
+Install DependenciesBashcomposer install
+npm install
+Environment SetupCopy file .env.example menjadi .env dan sesuaikan database:Bashcp .env.example .env
+php artisan key:generate
+Pastikan setting DB_DATABASE, DB_USERNAME, DB_PASSWORD sesuai PostgreSQL lokal Anda.Database MigrationBashphp artisan migrate --seed
+Run AppBuka 2 terminal berbeda:Terminal 1: php artisan serveTerminal 2: npm run dev5. ✅ Testing & Quality AssuranceProject ini dilengkapi dengan 35 Automated Tests untuk menjamin kestabilan. Test mencakup Unit Test dan Feature Test.Cara Menjalankan TestBashphp artisan test
+Cakupan Test UtamaModulDeskripsi TestStatusUser ProfileCek logika ID Unik (Register Null -> Update Generate).✅ PASSEquipmentCek validasi stok negatif & pencatatan log admin.✅ PASSTechnicianCek keamanan akses tugas & upload foto bukti.✅ PASSAuthCek Login, Register, & Reset Password.✅ PASS6. 📂 Panduan Import Data PelangganJika Anda memiliki data pelanggan lama (Excel/CSV), gunakan fitur Seeder khusus yang sudah disiapkan.Siapkan File CSVPastikan format CSV sesuai (ID, Nama, Alamat, dll).Simpan FileLetakkan file di storage/app/clients.csv.Jalankan CommandBashphp artisan db:seed --class=ImportClientSeeder
+Note: Script ini aman dijalankan karena menggunakan updateOrCreate dan tidak akan merusak ID Unik yang sudah ada.7. 🚀 Deployment (Railway/VPS)Environment Variables Wajib (Production)Pastikan variabel ini diset di server:Code snippetAPP_ENV=production
 APP_DEBUG=false
-APP_URL=[https://domain-anda-di-railway.app](https://domain-anda-di-railway.app)
+APP_URL=[https://filltech.up.railway.app](https://filltech.up.railway.app)
 DB_CONNECTION=pgsql
-# ... (Kredensial DB dari Railway Reference) ...
+# ... Credential Database ...
+Build CommandSaat deploy, pastikan perintah ini dijalankan:Bashcomposer install --no-dev --optimize-autoloader
+php artisan migrate --force
+npm run build
+php artisan config:cache
+php artisan route:cache
+Filltech Project Internal Documentation Dilarang menyebarkan source code ini tanpa izin Project Owner.
