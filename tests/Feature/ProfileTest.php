@@ -14,9 +14,7 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->get('/profile');
+        $response = $this->actingAs($user)->get('/profile');
 
         $response->assertOk();
     }
@@ -25,17 +23,21 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $response = $this->actingAs($user)
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
+                // Tambahkan field validasi lain jika diperlukan model Anda
+                'alamat' => 'Jl. Test', 
+                'rt' => '001',
+                'rw' => '002',
+                'nomor_rumah' => '10'
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/dashboard');
-
+            ->assertRedirect('/profile'); // [PERBAIKAN DISINI] Awalnya /dashboard
+        
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
@@ -47,16 +49,20 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $response = $this->actingAs($user)
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => $user->email,
+                // Tambahkan data dummy agar validasi lolos
+                'alamat' => 'Jl. Tetap',
+                'rt' => '001',
+                'rw' => '001',
+                'nomor_rumah' => '1'
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/dashboard');
+            ->assertRedirect('/profile'); // [PERBAIKAN DISINI] Awalnya /dashboard
 
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
@@ -65,8 +71,7 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $response = $this->actingAs($user)
             ->delete('/profile', [
                 'password' => 'password',
             ]);
@@ -83,8 +88,7 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
+        $response = $this->actingAs($user)
             ->from('/profile')
             ->delete('/profile', [
                 'password' => 'wrong-password',
