@@ -281,8 +281,8 @@
             <strong>Instruksi Pembayaran:</strong><br>
             Silakan transfer ke rekening berikut:<br>
             <ul style="margin: 5px 0 5px 15px; padding: 0;">
-                <li>BCA: 123-456-7890 (PT. Filltech Berkah Bersama)</li>
-                <li>Mandiri: 987-654-3210 (PT. Filltech Berkah Bersama)</li>
+                <li>Mandiri: 1090021374558 (Atas Nama AIDI)</li>
+                <li>BSI: 7136563957 (Atas Nama AIDI)</li>
             </ul>
             <i style="font-size: 11px;">*Mohon sertakan No. Invoice pada berita transfer.</i>
         </div>
