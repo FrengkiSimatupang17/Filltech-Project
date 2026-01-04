@@ -1,89 +1,133 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
 import { 
     ExclamationTriangleIcon, 
     CreditCardIcon, 
     ClockIcon, 
-    WifiIcon,
     ChatBubbleLeftIcon,
     UserCircleIcon,
     CheckBadgeIcon,
     SignalIcon,
     InformationCircleIcon,
     WrenchScrewdriverIcon,
-    ArrowDownTrayIcon, 
-    ArrowUpTrayIcon,
     BoltIcon,
-    CpuChipIcon
+    LightBulbIcon,
+    BanknotesIcon,
+    ShieldCheckIcon,
+    WifiIcon,
+    ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
-// --- KOMPONEN GRAFIK REALTIME (SIMULASI) ---
-const RealtimeTrafficWidget = () => {
-    const [dataPoints, setDataPoints] = useState(Array(20).fill(5));
-    const [currentSpeed, setCurrentSpeed] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            // Simulasi data random antara 10 - 80 Mbps
-            const newPoint = Math.floor(Math.random() * 70) + 10;
-            setCurrentSpeed(newPoint);
-
-            setDataPoints(prev => {
-                const newData = [...prev.slice(1), newPoint];
-                return newData;
-            });
-        }, 1000); 
-
-        return () => clearInterval(interval);
-    }, []);
-
-    // Konversi array data menjadi path SVG
-    const maxVal = 100;
-    const points = dataPoints.map((val, i) => {
-        const x = (i / (dataPoints.length - 1)) * 100;
-        const y = 100 - ((val / maxVal) * 100);
-        return `${x},${y}`;
-    }).join(' ');
-
+// --- KOMPONEN KEUNGGULAN PAKET (PENGGANTI STATISTIK DATA) ---
+const PackageBenefits = () => {
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 h-full flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                        <CpuChipIcon className="w-5 h-5 text-indigo-600" />
-                        Live Traffic
-                    </h4>
-                    <p className="text-xs text-gray-400">Penggunaan Bandwidth Realtime</p>
-                </div>
-                <div className="text-right">
-                    <span className="text-2xl font-black text-indigo-600">{currentSpeed}</span>
-                    <span className="text-xs font-bold text-gray-500 ml-1">Mbps</span>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between h-full">
+            <div>
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
+                    Status Layanan
+                </h4>
+                
+                <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                            <WifiIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-gray-800">Fiber Optic Stabil</p>
+                            <p className="text-xs text-gray-500">Jalur khusus streaming & gaming.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                            <BoltIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-gray-800">True Unlimited</p>
+                            <p className="text-xs text-gray-500">Bebas kuota, tanpa FUP (Fair Usage Policy).</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Area Grafik SVG */}
-            <div className="relative h-40 w-full bg-indigo-50/50 rounded-xl overflow-hidden border border-indigo-100">
-                <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                    {/* Area Fill */}
-                    <path d={`M0,100 ${points} V100 H0 Z`} fill="rgba(79, 70, 229, 0.2)" />
-                    {/* Garis Line */}
-                    <polyline points={points} fill="none" stroke="#4F46E5" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                </svg>
-                {/* Grid Lines */}
-                <div className="absolute inset-0 grid grid-rows-4 w-full h-full pointer-events-none">
-                    <div className="border-b border-indigo-100/50 w-full"></div>
-                    <div className="border-b border-indigo-100/50 w-full"></div>
-                    <div className="border-b border-indigo-100/50 w-full"></div>
+            <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="bg-green-50 p-3 rounded-xl border border-green-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-green-700">Koneksi Aman</span>
+                    <span className="flex items-center gap-1 text-[10px] bg-white px-2 py-1 rounded-md text-green-600 border border-green-200 shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        Terhubung
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- KOMPONEN PUSAT INFORMASI & TIPS (PENGGANTI LIVE TRAFFIC) ---
+const InformationCenter = () => {
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h4 className="font-bold text-gray-800 flex items-center gap-2">
+                    <InformationCircleIcon className="w-5 h-5 text-indigo-600" />
+                    Pusat Informasi FBB
+                </h4>
+                <span className="text-xs font-medium text-gray-400">Update Terkini</span>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                {/* Bagian Tips */}
+                <div className="bg-orange-50 rounded-xl p-5 border border-orange-100">
+                    <h5 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
+                        <LightBulbIcon className="w-5 h-5" /> Tips Koneksi Lancar
+                    </h5>
+                    <ul className="space-y-3">
+                        <li className="flex gap-2 text-sm text-gray-700">
+                            <span className="font-bold text-orange-500">1.</span>
+                            <span>Posisi router sebaiknya di tempat terbuka dan tinggi.</span>
+                        </li>
+                        <li className="flex gap-2 text-sm text-gray-700">
+                            <span className="font-bold text-orange-500">2.</span>
+                            <span>Restart modem seminggu sekali untuk refresh jaringan.</span>
+                        </li>
+                        <li className="flex gap-2 text-sm text-gray-700">
+                            <span className="font-bold text-orange-500">3.</span>
+                            <span>Hindari menumpuk barang elektronik di dekat modem.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Bagian Cara Bayar */}
+                <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                    <h5 className="font-bold text-blue-800 flex items-center gap-2 mb-3">
+                        <BanknotesIcon className="w-5 h-5" /> Cara Pembayaran Mudah
+                    </h5>
+                    <div className="space-y-4 relative">
+                        {/* Garis Vertikal */}
+                        <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-blue-200"></div>
+                        
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold z-10 shrink-0">1</div>
+                            <p className="text-sm text-gray-700">Cek Tagihan di menu <span className="font-bold">Riwayat Tagihan</span>.</p>
+                        </div>
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold z-10 shrink-0">2</div>
+                            <p className="text-sm text-gray-700">Transfer sesuai nominal ke Rekening Resmi PT. Filltech.</p>
+                        </div>
+                        <div className="relative flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold z-10 shrink-0">3</div>
+                            <p className="text-sm text-gray-700">Upload bukti transfer & tunggu verifikasi Admin.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div className="flex justify-between mt-4 text-xs text-gray-400">
-                <span>60s ago</span>
-                <span className="flex items-center gap-1 text-green-600 font-bold animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span> Live
-                </span>
-                <span>Now</span>
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 text-xs text-gray-500 flex justify-between items-center">
+                <span>Butuh bantuan teknis segera?</span>
+                <a href="https://wa.me/6281234567890" target="_blank" className="font-bold text-blue-600 hover:underline flex items-center gap-1">
+                    Hubungi Teknisi <ArrowRightIcon className="w-3 h-3" />
+                </a>
             </div>
         </div>
     );
@@ -104,10 +148,7 @@ const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
     
     const formatRupiah = (amount) => `Rp ${parseFloat(amount).toLocaleString('id-ID')}`;
     const hasUnpaidInvoice = !!unpaidInvoice;
-    
-    // Fallback jika id_unik null/undefined
     const userIdDisplay = auth.user.id_unik || `ID-${auth.user.id}`;
-    
     const waLink = `https://wa.me/6281234567890?text=Halo%20CS%20Filltech,%20saya%20pelanggan%20ID:%20${userIdDisplay}%20butuh%20bantuan.`;
 
     return (
@@ -175,94 +216,64 @@ const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
                                     <CheckBadgeIcon className="w-10 h-10" />
                                 </div>
                                 <h5 className="font-bold text-gray-900">Lunas!</h5>
-                                <p className="text-xs text-gray-500 mt-1">Tidak ada tagihan aktif.</p>
+                                <p className="text-xs text-gray-500 mt-1">Terima kasih telah membayar tepat waktu.</p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* KOLOM 2: WIDGET STATISTIK DATA (BARU) */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between">
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <SignalIcon className="w-5 h-5 text-blue-600" />
-                            Statistik Data
-                        </h4>
-                        
-                        <div className="mb-4">
-                            <div className="flex justify-between text-xs mb-1">
-                                <span className="text-gray-500">Pemakaian Bulan Ini</span>
-                                <span className="font-bold text-gray-900">145.2 GB</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                                <div className="bg-blue-600 h-2 rounded-full transition-all duration-1000" style={{ width: '45%' }}></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                            <div className="flex items-center gap-1 text-blue-700 text-[10px] font-bold uppercase mb-1">
-                                <ArrowDownTrayIcon className="w-3 h-3" /> Download
-                            </div>
-                            <p className="text-lg font-black text-gray-800">120.5 <span className="text-[10px] font-normal text-gray-500">GB</span></p>
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                            <div className="flex items-center gap-1 text-purple-700 text-[10px] font-bold uppercase mb-1">
-                                <ArrowUpTrayIcon className="w-3 h-3" /> Upload
-                            </div>
-                            <p className="text-lg font-black text-gray-800">24.7 <span className="text-[10px] font-normal text-gray-500">GB</span></p>
-                        </div>
-                    </div>
-                </div>
+                {/* KOLOM 2: KEUNGGULAN PAKET (MENGGANTIKAN STATISTIK DUMMY) */}
+                <PackageBenefits />
 
                 {/* KOLOM 3: MENU PINTAS */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Menu Pintas</h4>
-                    <div className="grid grid-cols-1 gap-2">
-                        <Link href={route('client.complaints.index')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-gray-700 hover:text-red-700 transition-all border border-transparent hover:border-red-100 group">
-                            <div className="p-2 bg-red-100 text-red-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
-                                <ExclamationTriangleIcon className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-bold">Lapor Gangguan</span>
-                        </Link>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between h-full">
+                    <div>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Menu Pintas</h4>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Link href={route('client.complaints.index')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-gray-700 hover:text-red-700 transition-all border border-transparent hover:border-red-100 group">
+                                <div className="p-2 bg-red-100 text-red-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
+                                    <ExclamationTriangleIcon className="w-4 h-4" />
+                                </div>
+                                <span className="text-sm font-bold">Lapor Gangguan</span>
+                            </Link>
 
-                        <Link href={route('client.invoices.index')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-all border border-transparent hover:border-blue-100 group">
-                            <div className="p-2 bg-blue-100 text-blue-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
-                                <CreditCardIcon className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-bold">Riwayat Tagihan</span>
-                        </Link>
+                            <Link href={route('client.invoices.index')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-all border border-transparent hover:border-blue-100 group">
+                                <div className="p-2 bg-blue-100 text-blue-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
+                                    <CreditCardIcon className="w-4 h-4" />
+                                </div>
+                                <span className="text-sm font-bold">Riwayat Tagihan</span>
+                            </Link>
 
-                        <Link href={route('profile.edit')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200 group">
-                            <div className="p-2 bg-gray-100 text-gray-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
-                                <UserCircleIcon className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-bold">Profil Saya</span>
-                        </Link>
+                            <Link href={route('profile.edit')} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200 group">
+                                <div className="p-2 bg-gray-100 text-gray-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
+                                    <UserCircleIcon className="w-4 h-4" />
+                                </div>
+                                <span className="text-sm font-bold">Profil Saya</span>
+                            </Link>
 
-                        <a href={waLink} target="_blank" className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-green-50 text-gray-700 hover:text-green-700 transition-all border border-transparent hover:border-green-100 group">
-                            <div className="p-2 bg-green-100 text-green-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
-                                <ChatBubbleLeftIcon className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-bold">WhatsApp CS</span>
-                        </a>
+                            <a href={waLink} target="_blank" className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-green-50 text-gray-700 hover:text-green-700 transition-all border border-transparent hover:border-green-100 group">
+                                <div className="p-2 bg-green-100 text-green-600 rounded-md group-hover:bg-white group-hover:shadow-sm">
+                                    <ChatBubbleLeftIcon className="w-4 h-4" />
+                                </div>
+                                <span className="text-sm font-bold">WhatsApp CS</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* ================= BARIS 3: GRID 2 KOLOM ================= */}
+            {/* ================= BARIS 3: GRID 2 KOLOM (INFO & PUSAT BANTUAN) ================= */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* KOLOM 1: INFO LAYANAN & SPEEDTEST (DITUMPUK) */}
-                <div className="space-y-6">
+                {/* KOLOM 1: JAM OPERASIONAL & SPEEDTEST (DITUMPUK) */}
+                <div className="space-y-6 h-full flex flex-col">
                     {/* Widget Info Layanan */}
-                    <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden border border-slate-700">
+                    <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden border border-slate-700 flex-1">
                         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500/20 rounded-full blur-xl"></div>
                         <div className="relative z-10">
                             <h3 className="font-bold flex items-center gap-2 mb-3 text-sm">
                                 <InformationCircleIcon className="w-5 h-5 text-blue-400" />
-                                Informasi Layanan
+                                Jam Operasional
                             </h3>
                             <div className="space-y-3">
                                 <div className="bg-white/5 p-2.5 rounded-lg border border-white/10 flex justify-between items-center">
@@ -297,9 +308,9 @@ const ServiceDetails = ({ subscription, unpaidInvoice, auth }) => {
                     </div>
                 </div>
 
-                {/* KOLOM 2: REALTIME TRAFFIC (MENGAMBIL 2 GRID DI LG) */}
+                {/* KOLOM 2: PUSAT INFORMASI (MENGGANTIKAN LIVE TRAFFIC DUMMY) */}
                 <div className="lg:col-span-2">
-                    <RealtimeTrafficWidget />
+                    <InformationCenter />
                 </div>
 
             </div>
