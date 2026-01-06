@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, useForm, router, usePage } from '@inertiajs/react'; // Tambah usePage
+import { useState, useEffect } from 'react'; // Tambah useEffect
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -12,6 +12,7 @@ import StatusBadge from '@/Components/StatusBadge';
 import { FaFileInvoiceDollar, FaCheckCircle, FaSearch, FaFilter, FaTimes, FaCalendarAlt } from 'react-icons/fa';
 
 export default function Index({ auth, subscriptions, filters }) {
+    const { flash } = usePage().props; // Ambil flash message dari controller
     const [showInvoiceModal, setShowInvoiceModal] = useState(null);
     
     // State Filter
@@ -23,6 +24,14 @@ export default function Index({ auth, subscriptions, filters }) {
     const { data, setData, post, processing, reset } = useForm({
         subscription_id: '', user_name: '', package_name: '', amount: '',
     });
+
+    // --- [FITUR BARU] OTOMATIS BUKA WHATSAPP SETELAH BUAT TAGIHAN ---
+    useEffect(() => {
+        if (flash.wa_link) {
+            // Membuka tab baru untuk WhatsApp secara otomatis
+            window.open(flash.wa_link, '_blank');
+        }
+    }, [flash.wa_link]);
 
     // --- LOGIC FILTER ---
     const handleSearch = (e) => {
@@ -47,7 +56,10 @@ export default function Index({ auth, subscriptions, filters }) {
     
     const submitCreateInvoice = (e) => {
         e.preventDefault();
-        post(route('admin.subscriptions.storeInvoice', data.subscription_id), { onSuccess: () => closeModal() });
+        // Menggunakan route storeInvoice yang diarahkan ke SubscriptionManagementController
+        post(route('admin.subscriptions.storeInvoice', data.subscription_id), { 
+            onSuccess: () => closeModal() 
+        });
     };
     
     const formatRupiah = (value) => `Rp ${parseFloat(value).toLocaleString('id-ID')}`;
@@ -101,7 +113,7 @@ export default function Index({ auth, subscriptions, filters }) {
                                         className="pl-10 w-full text-sm text-gray-900 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" 
                                         value={dateStart} 
                                         onChange={e => setDateStart(e.target.value)} 
-                                        style={{ colorScheme: 'light' }} // Agar icon kalender bawaan browser terlihat
+                                        style={{ colorScheme: 'light' }} 
                                     />
                                 </div>
 
@@ -188,13 +200,11 @@ export default function Index({ auth, subscriptions, filters }) {
                             <div className="md:hidden space-y-4">
                                 {subscriptions.data.map((sub) => (
                                     <div key={sub.id} className="bg-white p-5 rounded-xl shadow border border-gray-100 relative overflow-hidden">
-                                        {/* Status Strip Indicator */}
                                         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                                             sub.status === 'active' ? 'bg-green-500' : 
                                             (sub.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500')
                                         }`}></div>
                                         
-                                        {/* Header Card */}
                                         <div className="flex justify-between items-start mb-3 pl-3">
                                             <div>
                                                 <h3 className="font-bold text-lg text-gray-900">{sub.user_name}</h3>
@@ -203,7 +213,6 @@ export default function Index({ auth, subscriptions, filters }) {
                                             <StatusBadge status={sub.status} />
                                         </div>
 
-                                        {/* Content Grid */}
                                         <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 border-t border-gray-100 pt-3 mt-1 pl-3">
                                             <div>
                                                 <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wide mb-0.5">Paket</span>
@@ -219,7 +228,6 @@ export default function Index({ auth, subscriptions, filters }) {
                                             </div>
                                         </div>
 
-                                        {/* Action Button Area */}
                                         {sub.status === 'pending' && !sub.has_installation_invoice && (
                                             <div className="mt-4 pt-3 border-t border-gray-100 pl-3">
                                                 <PrimaryButton 
@@ -231,7 +239,6 @@ export default function Index({ auth, subscriptions, filters }) {
                                             </div>
                                         )}
                                         
-                                        {/* Indikator Read-only jika status lain */}
                                         {sub.has_installation_invoice && sub.status === 'pending' && (
                                             <div className="mt-4 pt-2 border-t border-gray-100 pl-3 text-center">
                                                 <span className="text-xs text-gray-400 italic flex items-center justify-center gap-1">

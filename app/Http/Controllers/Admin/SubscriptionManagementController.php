@@ -17,8 +17,6 @@ class SubscriptionManagementController extends Controller
 {
     protected $billingCalculator;
 
-    // Kita tetap inject Calculator (untuk fitur masa depan/edit manual),
-    // tapi TIDAK DIGUNAKAN di storeInstallationInvoice karena logicnya Full Payment.
     public function __construct(BillingCalculator $billingCalculator)
     {
         $this->billingCalculator = $billingCalculator;
@@ -39,7 +37,6 @@ class SubscriptionManagementController extends Controller
             });
         }
 
-        // Urutkan 'pending' paling atas, lalu terbaru
         $subscriptions = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc')
             ->paginate(10)
@@ -80,19 +77,15 @@ class SubscriptionManagementController extends Controller
                 ->with('error', 'Klien ini sudah memiliki tagihan instalasi.');
         }
 
-        // 2. [LOGIC] TAGIH FULL 1 BULAN
-        // Harga Paket SUDAH TERMASUK biaya instalasi.
-        // Total tagihan = Harga Paket saja.
-        
+        // 2. Logic Tagih Full 1 Bulan
         $totalAmount = $package->price; 
 
-        // 3. Tentukan Periode Aktif (1 Bulan Penuh dari Sekarang)
-        // Contoh: Daftar 15 Jan -> Expired 15 Feb.
+        // 3. Tentukan Periode Aktif
         $now = Carbon::now();
         $periodStart = $now;
-        $periodEnd = $now->copy()->addMonth(); // Aktif 1 bulan full
+        $periodEnd = $now->copy()->addMonth();
 
-        // 4. Deskripsi Transparan
+        // 4. Deskripsi
         $description = sprintf(
             "Paket Internet 1 Bulan Pertama (%s).\n(Sudah Termasuk Biaya Instalasi)\n*Periode Aktif: %s s/d %s",
             $package->name,
@@ -108,32 +101,31 @@ class SubscriptionManagementController extends Controller
             'amount' => $totalAmount,
             'status' => 'pending',
             'type' => 'installation',
-            'due_date' => $now->copy()->addDays(3), // Jatuh tempo 3 hari
+            'due_date' => $now->copy()->addDays(3),
             'description' => $description,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
         ]);
 
-        // 6. Kirim Notifikasi
+        // 6. Kirim Notifikasi Email
         try {
             $user->notify(new NewInvoiceNotification($invoice));
         } catch (\Exception $e) {
-            // Abaikan jika mailer error
+            // Abaikan
         }
 
+        // 7. [MODIFIKASI] Redirect dengan WA Link agar bisa otomatis buka tab baru di React
         return Redirect::route('admin.subscriptions.index')
-            ->with('success', 'Tagihan Awal (Full 1 Bulan) berhasil dibuat: Rp ' . number_format($totalAmount, 0, ',', '.'));
+            ->with([
+                'success' => 'Tagihan Awal berhasil dibuat untuk ' . $user->name,
+                'wa_link' => $invoice->wa_link // Properti ini diambil dari model Invoice yang kita edit tadi
+            ]);
     }
 
-    /**
-     * Download Invoice PDF (Admin Access)
-     */
     public function downloadInvoice($invoiceId)
     {
         $invoice = Invoice::with('user')->findOrFail($invoiceId);
-        
         $pdf = Pdf::loadView('pdf.invoice', ['invoice' => $invoice]);
-        
         return $pdf->download('invoice-'.$invoice->invoice_number.'.pdf');
     }
 }

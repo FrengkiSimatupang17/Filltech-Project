@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react'; // <--- Tambah usePage
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2'; 
 import { 
     MapPinIcon, 
     ClockIcon, 
@@ -11,8 +12,29 @@ import {
     BoltIcon
 } from '@heroicons/react/24/solid';
 
+// Hapus 'errors' dari parameter di sini, kita ambil pakai usePage agar lebih kuat
 export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
     const user = auth.user;
+    
+    // --- [PERBAIKAN UTAMA] AMBIL ERROR DARI USEPAGE ---
+    const { errors } = usePage().props; 
+
+    // --- PENDENGAR ERROR (POPUP JARAK JAUH) ---
+    useEffect(() => {
+        // Console log ini untuk cek di F12 (Inspect Element) apakah error terbaca
+        console.log("Cek Errors:", errors); 
+
+        if (errors && errors.location) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Absensi Gagal!',
+                text: errors.location, 
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'OK, Mengerti'
+            });
+        }
+    }, [errors]); 
+    // ------------------------------------------
 
     // --- Helper: Sapaan Berdasarkan Waktu ---
     const getGreeting = () => {
@@ -55,13 +77,22 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
                         status: 'present',
                         notes: `Absensi Mobile pada ${new Date().toLocaleTimeString('id-ID')}`
                     }, {
+                        preserveScroll: true,
                         onSuccess: () => {
                             setLoading(false);
                             setLocationStatus({ msg: '', type: '' });
+                            Swal.fire('Berhasil', 'Data absensi tercatat.', 'success');
                         },
-                        onError: () => {
+                        onError: (err) => {
                             setLoading(false);
-                            setLocationStatus({ msg: "Gagal mengirim data absensi.", type: 'error' });
+                            // Log error ke console browser untuk debugging
+                            console.log("Error dari server:", err);
+                            
+                            if (err.location) {
+                                setLocationStatus({ msg: "Gagal: Jarak kejauhan.", type: 'error' });
+                            } else {
+                                setLocationStatus({ msg: "Gagal mengirim data absensi.", type: 'error' });
+                            }
                         }
                     });
                 },
@@ -81,7 +112,6 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
 
         return (
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden relative mb-8">
-                {/* Background Pattern Hiasan */}
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-100 rounded-full opacity-50 blur-2xl"></div>
                 <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-indigo-100 rounded-full opacity-50 blur-2xl"></div>
 
@@ -195,9 +225,8 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
 
             <div className="min-h-screen bg-gray-50/50 pb-12">
                 
-                {/* HEADER SECTION DENGAN GRADASI */}
+                {/* HEADER SECTION */}
                 <div className="bg-gray-900 pb-24 pt-12 px-4 sm:px-6 lg:px-8 rounded-b-[2.5rem] shadow-2xl relative overflow-hidden">
-                    {/* Hiasan Background */}
                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
                         <div className="absolute top-0 left-1/4 w-64 h-64 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
                         <div className="absolute top-0 right-1/4 w-64 h-64 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
@@ -215,20 +244,11 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
                                 </h1>
                                 <p className="text-gray-400 text-sm mt-1">Teknisi Lapangan • ID: #{user.id.toString().padStart(4, '0')}</p>
                             </div>
-                            <div className="hidden md:block">
-                                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/10">
-                                    <p className="text-xs text-gray-300 uppercase tracking-widest text-center">Performance</p>
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <span className="text-yellow-400 text-lg">★★★★★</span>
-                                        <span className="text-white font-bold ml-2">Excellent</span>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* CONTENT SECTION (NAIK KE ATAS) */}
+                {/* CONTENT SECTION */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
                     
                     {/* 1. WIDGET ABSENSI */}
@@ -262,7 +282,7 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
                         />
                     </div>
 
-                    {/* 3. QUICK ACTIONS (NAVIGASI CEPAT) */}
+                    {/* 3. QUICK ACTIONS */}
                     <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">Akses Cepat</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <Link href={route('teknisi.tasks.index')} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-300 transition text-center group">
@@ -278,14 +298,6 @@ export default function TeknisiDashboard({ auth, taskStats, todayAttendance }) {
                             </div>
                             <span className="text-sm font-semibold text-gray-700">Stok Alat</span>
                         </Link>
-                        
-                         {/* Link Placeholder untuk fitur masa depan */}
-                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 opacity-60 cursor-not-allowed text-center grayscale">
-                            <div className="w-10 h-10 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <ClockIcon className="w-5 h-5" />
-                            </div>
-                            <span className="text-sm font-semibold text-gray-500">Riwayat (Coming Soon)</span>
-                        </div>
                     </div>
                 </div>
             </div>

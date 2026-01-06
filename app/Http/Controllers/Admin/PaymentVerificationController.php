@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Task;
-use App\Models\ActivityLog; // [WAJIB IMPORT]
+use App\Models\ActivityLog; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -15,8 +15,9 @@ class PaymentVerificationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Payment::with(['invoice.user']);
+        $query = Payment::with(['invoice.user', 'invoice.subscription']);
 
+        // 1. Filter Pencarian (ID, Nomor Invoice, Nama Client)
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('id', 'like', '%' . $request->search . '%')
@@ -29,6 +30,14 @@ class PaymentVerificationController extends Controller
             });
         }
 
+        // 2. [TAMBAHAN] Filter Berdasarkan Tipe (installation / monthly)
+        if ($request->filled('type')) {
+            $query->whereHas('invoice', function ($q) use ($request) {
+                $q->where('type', $request->type);
+            });
+        }
+
+        // Urutkan: Pending di atas, lalu yang terbaru
         $payments = $query->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
             ->latest()
             ->paginate(10)
@@ -36,7 +45,7 @@ class PaymentVerificationController extends Controller
 
         return Inertia::render('Admin/Payments/Index', [
             'payments' => $payments,
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'type']), // Kirim filter type ke frontend
         ]);
     }
 
@@ -57,16 +66,16 @@ class PaymentVerificationController extends Controller
                 'verified_by_admin_id' => Auth::id(),
             ]);
 
-            // 2. Logic Tambahan Berdasarkan Status
+            // 2. Logic Berdasarkan Status & Tipe Invoice
             if ($request->status === 'verified') {
                 $payment->invoice->update([
                     'status' => 'paid',
                     'paid_at' => now(),
                 ]);
 
-                // Jika Instalasi -> Buat Task & Aktifkan Langganan
+                // JIKA INVOICE INSTALASI
                 if ($payment->invoice->type === 'installation') {
-                    
+                    // Aktifkan Langganan
                     if ($payment->invoice->subscription) {
                         $payment->invoice->subscription->update([
                             'status' => 'active',
@@ -74,10 +83,8 @@ class PaymentVerificationController extends Controller
                         ]);
                     }
 
+                    // Buat Tugas Instalasi untuk Teknisi
                     $client = $payment->invoice->user;
-                    
-                    // --- [FIX URUTAN ALAMAT] ---
-                    // Urutan: Alamat -> RT -> RW -> Blok -> No
                     $parts = [];
                     if (!empty($client->alamat))      $parts[] = $client->alamat;
                     if (!empty($client->rt))          $parts[] = "RT." . $client->rt;
@@ -86,7 +93,7 @@ class PaymentVerificationController extends Controller
                     if (!empty($client->nomor_rumah)) $parts[] = "No. " . $client->nomor_rumah;
 
                     $alamatLengkap = empty($parts) ? 'Alamat belum dilengkapi di profil' : implode(', ', $parts);
-                    $kontak = $client->phone_number ?? '-';
+                    $kontak = $client->phone ?? $client->phone_number ?? '-';
 
                     Task::create([
                         'client_user_id' => $payment->user_id,
@@ -97,6 +104,7 @@ class PaymentVerificationController extends Controller
                         'status' => 'pending', 
                     ]);
                 } 
+                // JIKA INVOICE BULANAN
                 elseif ($payment->invoice->type === 'monthly') {
                     if ($payment->invoice->subscription) {
                         $payment->invoice->subscription->update(['status' => 'active']);
@@ -107,14 +115,14 @@ class PaymentVerificationController extends Controller
                 $payment->invoice->update(['status' => 'overdue']);
             }
 
-            // 3. [FIX] Catat Log Aktivitas Admin (Audit Trail)
+            // 3. Catat Log Aktivitas Admin
             $statusText = $request->status === 'verified' ? 'DITERIMA' : 'DITOLAK';
             $invoiceNum = $payment->invoice ? $payment->invoice->invoice_number : 'Unknown';
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'verify_payment',
-                'event' => 'update', // Sesuai kolom di DB
+                'event' => 'update',
                 'description' => "Memverifikasi pembayaran Invoice #{$invoiceNum} sebagai {$statusText}",
                 'ip_address' => $request->ip(),
             ]);

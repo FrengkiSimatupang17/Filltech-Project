@@ -5,69 +5,104 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Subscription;
 use App\Models\Invoice;
+use App\Services\BillingCalculator;
+use App\Notifications\NewInvoiceNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GenerateMonthlyInvoices extends Command
 {
+    // Signature ini yang dipanggil oleh Cron Job
     protected $signature = 'billing:generate-monthly';
-    protected $description = 'Generate invoice bulanan untuk langganan aktif yang jatuh tempo';
+    protected $description = 'Generate invoice bulanan: Bulan 1 (Deposit), Bulan 2 (Pro-rata), Bulan 3+ (Full)';
 
     public function handle()
     {
-        $this->info('Memulai proses generate invoice bulanan...');
+        $today = Carbon::now();
         
-        // 1. Cari langganan yang AKTIF
-        $activeSubs = Subscription::where('status', 'active')->get();
-        $count = 0;
+        // Sesuai diskusi: Generate tagihan dilakukan setiap TANGGAL 1
+        if ($today->day !== 1) {
+            $this->info("Bukan tanggal 1, sistem standby.");
+            return;
+        }
 
-        foreach ($activeSubs as $sub) {
-            // Logika: Tagihan dibuat setiap tanggal yang sama dengan tanggal aktif
-            // Contoh: Aktif tgl 15 Jan -> Tagihan muncul tiap tgl 15
-            
-            // Pastikan active_at tidak null agar tidak error parsing
-            if (!$sub->active_at) continue;
+        // Ambil semua langganan yang aktif
+        $subscriptions = Subscription::with(['package', 'user'])
+            ->where('status', 'active')
+            ->get();
 
-            $activationDate = Carbon::parse($sub->active_at);
-            $today = Carbon::now();
-            
-            // Cek apakah hari ini adalah tanggal siklus tagihan
-            // Note: Jika tanggal aktif > jumlah hari bulan ini (misal tgl 31 di bulan Feb), 
-            // logika sederhana ini mungkin skip. Tapi untuk MVP ini cukup.
-            if ($today->day == $activationDate->day) {
+        $calculator = new BillingCalculator();
+
+        foreach ($subscriptions as $sub) {
+            try {
+                if (!$sub->activated_at) continue;
+
+                $activationDate = Carbon::parse($sub->activated_at);
                 
-                // Cek apakah invoice bulan ini SUDAH ADA? (Agar tidak dobel)
-                $exists = Invoice::where('subscription_id', $sub->id)
+                // Cek selisih bulan antara aktivasi dan sekarang (tanggal 1 bulan baru)
+                // Kita pakai diffInMonths dengan setting 'false' agar akurat secara kalender
+                $diffInMonths = $activationDate->diffInMonths($today);
+
+                $amount = 0;
+                $description = "";
+
+                if ($diffInMonths == 1) {
+                    /**
+                     * BULAN KE-2: LOGIKA PRO-RATA
+                     * Menghitung sisa hari dari tanggal pasang sampai akhir bulan pertama.
+                     * Ini menggunakan BillingCalculator yang sudah Bapak buat & test.
+                     */
+                    $result = $calculator->calculateProrata($sub->package->price, $activationDate);
+                    $amount = $result['amount'];
+                    $description = "Penyesuaian Pro-rata (Sisa hari bulan pertama)";
+                } 
+                elseif ($diffInMonths > 1) {
+                    /**
+                     * BULAN KE-3 DST: KEMBALI FULL
+                     * Tagihan normal sesuai harga paket.
+                     */
+                    $amount = $sub->package->price;
+                    $description = "Layanan Internet Bulanan - " . $today->format('F Y');
+                } else {
+                    // Bulan ke-1: Tidak buat invoice karena sudah bayar saat pendaftaran (Deposit)
+                    continue;
+                }
+
+                // Proteksi: Jangan buat invoice ganda di bulan yang sama
+                $alreadyInvoiced = Invoice::where('subscription_id', $sub->id)
                     ->where('type', 'monthly')
                     ->whereMonth('created_at', $today->month)
                     ->whereYear('created_at', $today->year)
                     ->exists();
 
-                if (!$exists) {
-                    try {
-                        DB::transaction(function () use ($sub, $today) {
-                            Invoice::create([
-                                'user_id' => $sub->user_id,
-                                'subscription_id' => $sub->id,
-                                'invoice_number' => 'INV-' . $today->format('Ymd') . '-' . rand(1000, 9999),
-                                'type' => 'monthly',
-                                'amount' => $sub->price,
-                                'status' => 'pending',
-                                'due_date' => $today->copy()->addDays(7), // Jatuh tempo 7 hari
-                            ]);
-                        });
-                        
-                        $count++;
-                        $this->info("Invoice dibuat untuk User ID: {$sub->user_id}");
-                    } catch (\Exception $e) {
-                        Log::error("Gagal buat invoice User {$sub->user_id}: " . $e->getMessage());
-                        $this->error("Gagal: " . $e->getMessage());
-                    }
+                if (!$alreadyInvoiced && $amount > 0) {
+                    DB::transaction(function () use ($sub, $amount, $today, $description) {
+                        $invoice = Invoice::create([
+                            'user_id'         => $sub->user_id,
+                            'subscription_id' => $sub->id,
+                            'invoice_number'  => 'INV-' . $today->format('Ym') . '-' . str_pad($sub->id, 4, '0', STR_PAD_LEFT),
+                            'type'            => 'monthly',
+                            'amount'          => $amount,
+                            'status'          => 'pending',
+                            'due_date'        => $today->copy()->addDays(10), // Jatuh tempo tanggal 10
+                            'notes'           => $description,
+                        ]);
+
+                        // Kirim notifikasi ke user (jika sistem notifikasi sudah siap)
+                        if ($sub->user) {
+                            $sub->user->notify(new NewInvoiceNotification($invoice));
+                        }
+                    });
+
+                    $this->info("Invoice Berhasil dibuat untuk: " . $sub->user->name);
                 }
+
+            } catch (\Exception $e) {
+                Log::error("Gagal generate invoice untuk Sub ID {$sub->id}: " . $e->getMessage());
             }
         }
 
-        $this->info("Selesai. $count invoice berhasil dibuat.");
+        $this->info("Proses Billing Selesai.");
     }
 }

@@ -10,7 +10,9 @@ import {
     PhotoIcon,
     CalendarIcon,
     UserIcon,
-    BanknotesIcon
+    BanknotesIcon,
+    ChatBubbleLeftRightIcon, // Icon Tambahan untuk WA
+    FunnelIcon // Icon Tambahan untuk Filter
 } from '@heroicons/react/24/outline';
 
 export default function Index({ auth, payments, filters }) {
@@ -21,10 +23,15 @@ export default function Index({ auth, payments, filters }) {
     const [rejectionReason, setRejectionReason] = useState('');
     const [processing, setProcessing] = useState(false);
 
-    // Handle Search
+    // Handle Search & Filter
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(route('admin.payments.index'), { search }, { preserveState: true });
+        router.get(route('admin.payments.index'), { search, type: filters.type }, { preserveState: true });
+    };
+
+    // Fungsi baru untuk menangani perpindahan Tab Filter
+    const handleFilterType = (type) => {
+        router.get(route('admin.payments.index'), { search, type: type }, { preserveState: true });
     };
 
     // Modal Control
@@ -74,29 +81,55 @@ export default function Index({ auth, payments, filters }) {
             <div className="py-12 bg-gray-50/50 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     
-                    {/* SEARCH BAR */}
-                    <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <BanknotesIcon className="w-6 h-6 text-blue-600" />
-                            <h3 className="font-bold text-lg">Daftar Transaksi</h3>
+                    {/* SEARCH & FILTER TABS */}
+                    <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <BanknotesIcon className="w-6 h-6 text-blue-600" />
+                                <h3 className="font-bold text-lg">Daftar Transaksi</h3>
+                            </div>
+                            <form onSubmit={handleSearch} className="relative w-full md:w-96">
+                                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <input 
+                                    type="text"
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+                                    placeholder="Cari ID Invoice / Nama Client..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </form>
                         </div>
-                        <form onSubmit={handleSearch} className="relative w-full md:w-96">
-                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input 
-                                type="text"
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition text-sm"
-                                placeholder="Cari ID Invoice / Nama Client..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </form>
+
+                        {/* TAB FILTER TYPE (BARU) */}
+                        <div className="flex items-center gap-2 border-t pt-4 overflow-x-auto">
+                            <FunnelIcon className="w-4 h-4 text-gray-400 hidden sm:block" />
+                            <div className="flex bg-gray-100 p-1 rounded-lg">
+                                <button
+                                    onClick={() => handleFilterType('')}
+                                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition ${!filters.type ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Semua
+                                </button>
+                                <button
+                                    onClick={() => handleFilterType('installation')}
+                                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition ${filters.type === 'installation' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Instalasi Baru
+                                </button>
+                                <button
+                                    onClick={() => handleFilterType('monthly')}
+                                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition ${filters.type === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Tagihan Bulanan
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* --- MOBILE VIEW (CARDS) --- */}
                     <div className="grid grid-cols-1 gap-4 md:hidden">
                         {payments.data.map((payment) => (
                             <div key={payment.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-                                {/* Status Stripe */}
                                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${
                                     payment.status === 'verified' ? 'bg-green-500' : 
                                     payment.status === 'rejected' ? 'bg-red-500' : 'bg-yellow-500'
@@ -105,7 +138,12 @@ export default function Index({ auth, payments, filters }) {
                                 <div className="flex justify-between items-start mb-3 pl-2">
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Invoice</p>
-                                        <p className="text-blue-600 font-mono font-bold text-sm">#{payment.invoice?.invoice_number}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-blue-600 font-mono font-bold text-sm">#{payment.invoice?.invoice_number}</p>
+                                            <span className={`text-[10px] px-1.5 rounded-full border font-bold uppercase ${payment.invoice?.type === 'installation' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                {payment.invoice?.type === 'installation' ? 'Pasang' : 'Bulan'}
+                                            </span>
+                                        </div>
                                     </div>
                                     <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${getStatusBadge(payment.status)}`}>
                                         {payment.status}
@@ -117,6 +155,14 @@ export default function Index({ auth, payments, filters }) {
                                         <UserIcon className="w-4 h-4 text-gray-400" />
                                         <span className="text-sm font-medium text-gray-800">{payment.invoice?.user?.name || 'Unknown'}</span>
                                     </div>
+                                    {/* TOMBOL WA MOBILE */}
+                                    <a 
+                                        href={payment.invoice?.wa_link} 
+                                        target="_blank" 
+                                        className="inline-flex items-center text-xs text-green-600 font-bold hover:underline"
+                                    >
+                                        <ChatBubbleLeftRightIcon className="w-3 h-3 mr-1" /> Chat WhatsApp
+                                    </a>
                                     <div className="flex items-center gap-2">
                                         <CalendarIcon className="w-4 h-4 text-gray-400" />
                                         <span className="text-sm text-gray-600">{new Date(payment.payment_date).toLocaleDateString('id-ID')}</span>
@@ -171,8 +217,19 @@ export default function Index({ auth, payments, filters }) {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-gray-900">{payment.invoice?.user?.name}</span>
-                                                    <span className="text-xs text-blue-600 font-mono">#{payment.invoice?.invoice_number}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-gray-900">{payment.invoice?.user?.name}</span>
+                                                        {/* TOMBOL WA DESKTOP */}
+                                                        <a href={payment.invoice?.wa_link} target="_blank" title="Kirim Pesan WhatsApp">
+                                                            <ChatBubbleLeftRightIcon className="w-4 h-4 text-green-500 hover:text-green-700 transition cursor-pointer" />
+                                                        </a>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-blue-600 font-mono">#{payment.invoice?.invoice_number}</span>
+                                                        <span className={`text-[9px] px-1.5 rounded-full border font-bold uppercase ${payment.invoice?.type === 'installation' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                            {payment.invoice?.type === 'installation' ? 'Pemasangan' : 'Bulanan'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -209,7 +266,7 @@ export default function Index({ auth, payments, filters }) {
                                 ) : (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-10 text-center text-gray-500 bg-gray-50/50">
-                                            Tidak ada data pembayaran ditemukan.
+                                            Tidak ada data pembayaran ditemukan untuk kategori ini.
                                         </td>
                                     </tr>
                                 )}
@@ -223,11 +280,10 @@ export default function Index({ auth, payments, filters }) {
                 </div>
             </div>
 
-            {/* --- MANUAL MODAL (NO FOCUS TRAP ERROR) --- */}
+            {/* Modal konfirmasi */}
             {selectedPayment && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 transition-all">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-100 animate-in fade-in zoom-in duration-200">
-                        {/* Modal Header */}
                         <div className={`px-6 py-4 border-b flex items-center gap-2 ${actionType === 'verified' ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
                             {actionType === 'verified' ? (
                                 <CheckCircleIcon className="w-6 h-6 text-green-600" />
@@ -239,7 +295,6 @@ export default function Index({ auth, payments, filters }) {
                             </h3>
                         </div>
 
-                        {/* Modal Body */}
                         <div className="p-6">
                             <p className="text-gray-600 mb-4 text-sm leading-relaxed">
                                 {actionType === 'verified' 
@@ -263,7 +318,6 @@ export default function Index({ auth, payments, filters }) {
                             )}
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
                             <button 
                                 onClick={closeModal}
